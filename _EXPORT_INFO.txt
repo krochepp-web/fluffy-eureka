@@ -1,0 +1,11 @@
+CUSTOM Tracker – VBA Export
+-------------------------------------------------------
+WorkbookName: 100 - CUSTOM TRACKER 3.4.2^M.xlsm
+WorkbookPath: https://d.docs.live.net/8ab37a4b2e1649c0/Custom Tracker/Tracker 3.0/100 - CUSTOM TRACKER 3.4.2^M.xlsm
+ExportFolder: C:\Users\kroch\OneDrive\Custom Tracker\Tracker 3.0
+ExportedAt: 2025-12-30 19:09:04
+User: kroch
+ExcelVersion: 16.0
+OK: 26
+Failed: 0
+HadErr52: NO
