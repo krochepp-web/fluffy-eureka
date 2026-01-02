@@ -89,7 +89,8 @@ NextR:
     Exit Sub
 
 EH:
-    MsgBox "Audit_DataCheck_Summary failed: " & Err.Description, vbExclamation, "Audit_DataCheck_Summary"
+    MsgBox "Audit_DataCheck_Summary failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Audit_DataCheck_Summary"
 End Sub
 
 Private Function EnsureWorksheet(ByVal wb As Workbook, ByVal sheetName As String) As Worksheet

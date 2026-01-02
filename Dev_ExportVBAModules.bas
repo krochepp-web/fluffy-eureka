@@ -157,7 +157,7 @@ Private Sub WriteExportInfo(ByVal exportFolder As String, ByVal okCount As Long,
     infoFile = exportFolder & "\_EXPORT_INFO.txt"
     Set ts = fso.CreateTextFile(infoFile, True)
 
-    ts.WriteLine "CUSTOM Tracker – VBA Export"
+    ts.WriteLine "CUSTOM Tracker â€“ VBA Export"
     ts.WriteLine String(55, "-")
     ts.WriteLine "WorkbookName: " & ThisWorkbook.Name
     ts.WriteLine "WorkbookPath: " & ThisWorkbook.FullName
@@ -213,6 +213,8 @@ Private Function EnsureFolderExistsSafe(ByVal folderPath As String) As Boolean
     EnsureFolderExistsSafe = True
     Exit Function
 EH:
+    MsgBox "EnsureFolderExistsSafe failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Export Failed"
     EnsureFolderExistsSafe = False
 End Function
 

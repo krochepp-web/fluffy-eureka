@@ -93,7 +93,8 @@ EH:
     On Error Resume Next
     M_Core_Logging.LogEvent PROC_NAME, Err.Number, Err.Description, "Unhandled error"
     On Error GoTo 0
-    MsgBox "Data Integrity validation failed: " & Err.Description, vbExclamation, "Validate_DataIntegrity_All"
+    MsgBox "Data Integrity validation failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Validate_DataIntegrity_All"
     Validate_DataIntegrity_All = False
 End Function
 
@@ -573,7 +574,7 @@ Private Function BuildCompositeKey(ByVal lo As ListObject, ByVal cols As Collect
         If Len(parts(i)) > 0 Then allBlank = False: Exit For
     Next i
 
-    If allBlank Then BuildCompositeKey = "" Else BuildCompositeKey = Join(parts, "¦")
+    If allBlank Then BuildCompositeKey = "" Else BuildCompositeKey = Join(parts, "Â¦")
 End Function
 
 Private Function ParseFKTargets(ByVal fkSpec As String, ByRef tgtTab As String, ByRef tgtTable As String, ByRef tgtCol As String) As Boolean

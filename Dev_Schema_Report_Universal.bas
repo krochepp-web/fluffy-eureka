@@ -170,6 +170,8 @@ Private Function HasAnyHeaders(ByRef headers() As String) As Boolean
     HasAnyHeaders = (UBound(headers) >= LBound(headers))
     Exit Function
 EH:
+    MsgBox "Error in HasAnyHeaders." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Schema Export"
     HasAnyHeaders = False
 End Function
 

@@ -119,6 +119,8 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error entering critical section", Err.Description, Err.Number, activityId
+    MsgBox "Error entering critical section." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Application State"
     ' Do not raise further; better to leave state unchanged than crash.
     Resume CleanExit
 End Sub
@@ -158,6 +160,8 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error exiting critical section", Err.Description, Err.Number, activityId
+    MsgBox "Error exiting critical section." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Application State"
     ' Best effort to restore state even on error.
     Resume CleanExit
 End Sub
@@ -231,7 +235,8 @@ CleanExit:
 EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in Test_Core_Toggles", Err.Description, Err.Number
-    MsgBox "Error in Test_Core_Toggles: " & Err.Description, vbCritical, PROC_NAME
+    MsgBox "Error in Test_Core_Toggles." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbCritical, PROC_NAME
     Resume CleanExit
 End Sub
 

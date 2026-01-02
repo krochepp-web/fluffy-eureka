@@ -165,6 +165,8 @@ CleanExit:
 EH:
     ' If logging itself fails, we do NOT raise further errors. Just debug-print.
     Debug.Print "Logging error in " & PROC_NAME & ": " & Err.Number & " - " & Err.Description
+    MsgBox "Logging error." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Logging"
     Resume CleanExit
 End Sub
 
