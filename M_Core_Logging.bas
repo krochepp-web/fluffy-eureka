@@ -62,6 +62,7 @@ Option Explicit
 
 ' Re-entry guard to avoid recursive logging if something inside LogEvent fails
 Private mIsLogging As Boolean
+Private Const LOG_DIAGNOSTICS As Boolean = True
 
 '===============================================================================
 ' Public API
@@ -165,6 +166,17 @@ CleanExit:
 EH:
     ' If logging itself fails, we do NOT raise further errors. Just debug-print.
     Debug.Print "Logging error in " & PROC_NAME & ": " & Err.Number & " - " & Err.Description
+    If LOG_DIAGNOSTICS Then
+        MsgBox _
+            "Logging failed inside " & PROC_NAME & "." & vbCrLf & _
+            "Err " & Err.Number & ": " & Err.Description & vbCrLf & vbCrLf & _
+            "Check these items:" & vbCrLf & _
+            "1) Sheet exists: " & SH_LOG & vbCrLf & _
+            "2) Table exists: " & TBL_LOG & vbCrLf & _
+            "3) Sheet/Table not protected or locked" & vbCrLf & _
+            "4) Log table columns match constants in M_Core_Constants", _
+            vbExclamation, "Log Diagnostics"
+    End If
     Resume CleanExit
 End Sub
 
