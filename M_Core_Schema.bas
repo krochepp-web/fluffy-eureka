@@ -341,6 +341,8 @@ Private Function HasListColumn(ByVal lo As ListObject, ByVal colName As String) 
     HasListColumn = True
     Exit Function
 EH:
+    MsgBox "HasListColumn failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Schema Validation"
     HasListColumn = False
 End Function
 

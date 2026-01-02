@@ -306,7 +306,8 @@ EH:
     On Error Resume Next
     If Not lr Is Nothing Then lr.Delete
     On Error GoTo 0
-    MsgBox "No new component created." & vbCrLf & "Error: " & Err.Description, vbExclamation, "New Component"
+    MsgBox "No new component created." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Component"
 End Sub
 
 '==========================
@@ -368,6 +369,8 @@ Private Function GateReady_Safe(Optional ByVal showUserMessage As Boolean = True
     GateReady_Safe = M_Core_Gate.Gate_Ready(showUserMessage)
     Exit Function
 EH:
+    MsgBox "GateReady_Safe failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Component"
     GateReady_Safe = False
 End Function
 
@@ -534,6 +537,8 @@ Private Sub RequireNamedRange(ByVal namedRange As String)
     If nm Is Nothing Then Err.Raise vbObjectError + 5800, "RequireNamedRange", "Named range not found: " & namedRange
     Exit Sub
 EH:
+    MsgBox "RequireNamedRange failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Component"
     Err.Raise vbObjectError + 5801, "RequireNamedRange", "Named range not found: " & namedRange
 End Sub
 
@@ -931,6 +936,8 @@ CleanExit:
 EH:
     ' Fail "soft" (sorting should not block record creation)
     ' If you prefer to log, replace with M_Core_Logging.LogEvent(...) here.
+    MsgBox "SortTable_ByColumn failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     Resume CleanExit
 End Sub
 

@@ -88,7 +88,8 @@ Public Sub UI_Run_Comps_Tests()
 
 EH:
     LogErrorSafe PROC_NAME, "Unhandled error in test runner", Err.Number, Err.Description
-    MsgBox "Comps test runner failed: " & Err.Description, vbExclamation, "Comps Tests"
+    MsgBox "Comps test runner failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Comps Tests"
 End Sub
 
 Private Sub RunOneTest(ByVal testName As String, ByRef passCount As Long, ByRef failCount As Long)
@@ -115,6 +116,8 @@ Private Sub RunOneTest(ByVal testName As String, ByRef passCount As Long, ByRef 
 EH:
     failCount = failCount + 1
     LogErrorSafe PROC_NAME, "FAIL: " & testName, Err.Number, Err.Description
+    MsgBox "Test failed: " & testName & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Comps Tests"
 End Sub
 
 '===============================================================================
@@ -156,6 +159,8 @@ Private Sub Test_CompID_NextValueAndFormat()
 
 EH:
     LogErrorSafe PROC_NAME, "Error", Err.Number, Err.Description
+    MsgBox "Test_CompID_NextValueAndFormat failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Comps Tests"
     Err.Raise Err.Number, PROC_NAME, Err.Description
 End Sub
 
@@ -203,6 +208,8 @@ EH:
     On Error GoTo 0
 
     LogErrorSafe PROC_NAME, "Error", Err.Number, Err.Description
+    MsgBox "Test_Unique_OurPN_OurRev failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Comps Tests"
     Err.Raise Err.Number, PROC_NAME, Err.Description
 End Sub
 
@@ -252,6 +259,8 @@ EH:
     On Error GoTo 0
 
     LogErrorSafe PROC_NAME, "Error", Err.Number, Err.Description
+    MsgBox "Test_Rollback_Safety failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Comps Tests"
     Err.Raise Err.Number, PROC_NAME, Err.Description
 End Sub
 
@@ -286,6 +295,8 @@ Private Sub Test_Supplier_Normalization_Match()
 
 EH:
     LogErrorSafe PROC_NAME, "Error", Err.Number, Err.Description
+    MsgBox "Test_Supplier_Normalization_Match failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Comps Tests"
     Err.Raise Err.Number, PROC_NAME, Err.Description
 End Sub
 
@@ -344,6 +355,8 @@ EH:
     On Error Resume Next
     If Not lr Is Nothing Then lr.Delete
     On Error GoTo 0
+    MsgBox "CreateRowThenForceErrorAndRollback cleanup failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Comps Tests"
 End Sub
 
 '===============================================================================

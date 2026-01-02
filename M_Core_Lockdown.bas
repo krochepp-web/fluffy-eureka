@@ -73,7 +73,8 @@ Public Sub Lockdown_Remove()
     Exit Sub
 
 EH:
-    MsgBox "Lockdown_Remove failed: " & Err.Description, vbExclamation, "Lockdown"
+    MsgBox "Lockdown_Remove failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Lockdown"
 End Sub
 
 Private Sub Lockdown_Run(ByVal dryRun As Boolean)
@@ -144,7 +145,7 @@ Private Sub Lockdown_Run(ByVal dryRun As Boolean)
 
 EH:
     MsgBox "Lockdown failed at step: " & gStep & vbCrLf & _
-           "Err " & Err.Number & ": " & Err.Description, vbExclamation, "Lockdown"
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Lockdown"
 End Sub
 
 '----------------------------

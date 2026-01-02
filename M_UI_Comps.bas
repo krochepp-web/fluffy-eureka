@@ -39,6 +39,8 @@ Public Sub UI_New_Component()
 
 EH:
     M_Core_Logging.LogError PROC_NAME, "UI_New_Component failed", "Err " & Err.Number & ": " & Err.Description, Err.Number
-    MsgBox "UI_New_Component failed. See Log sheet for details.", vbExclamation, "New Component"
+    MsgBox "UI_New_Component failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description & vbCrLf & _
+           "See Log sheet for details.", vbExclamation, "New Component"
 End Sub
 

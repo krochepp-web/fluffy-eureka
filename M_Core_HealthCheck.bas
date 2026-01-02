@@ -101,7 +101,8 @@ CleanExit:
 EH:
     TryLog PROC_NAME, Err.Number, Err.Description, "Unhandled error in health check."
     If showUserMessage Then
-        MsgBox "HealthCheck_RunAll failed: " & Err.Description, vbCritical, "Health Check"
+        MsgBox "HealthCheck_RunAll failed." & vbCrLf & _
+               "Error " & Err.Number & ": " & Err.Description, vbCritical, "Health Check"
     End If
     Resume CleanExit
 End Sub

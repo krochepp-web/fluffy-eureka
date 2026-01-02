@@ -119,7 +119,7 @@ Public Sub NewSupplier()
     If Len(Trim$(CStr(v))) = 0 Then GoTo FailAndRollback
     SetByHeader lo, lr, "ASLStatus", v
 
-    ' SupplierContact (optional; not in your “four rows”, but exists in schema—keep it simple)
+    ' SupplierContact (optional; not in your â€œfour rowsâ€, but exists in schemaâ€”keep it simple)
     If ColumnExists(lo, "SupplierContact") Then
         Dim contactName As String
         contactName = Trim$(InputBox("Supplier Contact (optional).", "New Supplier (" & supplierId & ")"))
@@ -148,7 +148,8 @@ FailAndRollback:
 
 EH:
     M_Core_Logging.LogError PROC_NAME, "Error creating supplier", "Err " & Err.Number & ": " & Err.Description, Err.Number
-    MsgBox "New Supplier failed. See Log sheet for details." & vbCrLf & Err.Description, vbExclamation, "New Supplier"
+    MsgBox "New Supplier failed. See Log sheet for details." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Supplier"
 End Sub
 
 '===============================================================================
@@ -459,6 +460,8 @@ Private Function ValueInNamedRange(ByVal wb As Workbook, ByVal rangeName As Stri
     Next c
     Exit Function
 EH:
+    MsgBox "ValueInNamedRange failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Supplier Entry"
     ValueInNamedRange = False
 End Function
 
@@ -467,6 +470,8 @@ Private Function CompareGE(ByVal a As Variant, ByVal b As Variant) As Boolean
     CompareGE = (a >= b)
     Exit Function
 EH:
+    MsgBox "CompareGE failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Supplier Entry"
     CompareGE = False
 End Function
 
@@ -475,6 +480,8 @@ Private Function CompareLE(ByVal a As Variant, ByVal b As Variant) As Boolean
     CompareLE = (a <= b)
     Exit Function
 EH:
+    MsgBox "CompareLE failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Supplier Entry"
     CompareLE = False
 End Function
 
@@ -519,7 +526,7 @@ Private Function SafeUserId() As String
 End Function
 
 Private Sub StampAuditIfPresent(ByVal lo As ListObject, ByVal lr As ListRow, ByVal userId As String, ByVal ts As Date)
-    ' Uses your existing constants (COL_CREATED_AT etc.). If those columns don’t exist, it silently skips.
+    ' Uses your existing constants (COL_CREATED_AT etc.). If those columns donâ€™t exist, it silently skips.
     On Error Resume Next
     If ColumnExists(lo, COL_CREATED_AT) Then SetByHeader lo, lr, COL_CREATED_AT, ts
     If ColumnExists(lo, COL_CREATED_BY) Then SetByHeader lo, lr, COL_CREATED_BY, userId
