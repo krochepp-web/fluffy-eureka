@@ -38,8 +38,14 @@ Public Sub Audit_DataCheck_Summary()
     Set wsSrc = wb.Worksheets(SRC_SHEET)
 
     lastRow = wsSrc.Cells(wsSrc.Rows.Count, 1).End(xlUp).row
+    Set wsOut = EnsureWorksheet(wb, OUT_SHEET)
+    wsOut.Cells.ClearContents
+    wsOut.Range("A1:D1").value = Array("Category", "TabName", "TableName", "Count")
+
     If lastRow < 2 Then
-        MsgBox "No issues found (Data_Check has no rows).", vbInformation, "Audit_DataCheck_Summary"
+        wsOut.Columns("A:D").AutoFit
+        MsgBox "No issues found (Data_Check has no rows)." & vbCrLf & _
+               "Created '" & OUT_SHEET & "' summary (empty).", vbInformation, "Audit_DataCheck_Summary"
         Exit Sub
     End If
 
@@ -63,10 +69,6 @@ Public Sub Audit_DataCheck_Summary()
 
 NextR:
     Next r
-
-    Set wsOut = EnsureWorksheet(wb, OUT_SHEET)
-    wsOut.Cells.ClearContents
-    wsOut.Range("A1:D1").value = Array("Category", "TabName", "TableName", "Count")
 
     Dim outRow As Long
     outRow = 2
