@@ -177,6 +177,8 @@ EH:
             "4) Log table columns match constants in M_Core_Constants", _
             vbExclamation, "Log Diagnostics"
     End If
+    MsgBox "Logging error." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Logging"
     Resume CleanExit
 End Sub
 

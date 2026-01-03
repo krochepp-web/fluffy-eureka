@@ -44,7 +44,9 @@ CleanExit:
 
 EH:
     M_Core_Logging.LogError PROC_NAME, "Failed: New Supplier", "Err " & Err.Number & ": " & Err.Description, Err.Number
-    MsgBox "UI_New_Supplier failed. See Log sheet for details.", vbExclamation, "New Supplier"
+    MsgBox "UI_New_Supplier failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description & vbCrLf & _
+           "See Log sheet for details.", vbExclamation, "New Supplier"
     Resume CleanExit
 End Sub
 

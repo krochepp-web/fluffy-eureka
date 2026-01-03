@@ -94,6 +94,8 @@ CleanExit:
 EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in ConfirmProceed", Err.Description, Err.Number
+    MsgBox "Error in " & PROC_NAME & "." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     ConfirmProceed = False
     Resume CleanExit
 End Function
@@ -129,6 +131,8 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error retrieving ListObject '" & tableName & "'", Err.Description, Err.Number
+    MsgBox "Error retrieving ListObject '" & tableName & "'." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     Set SafeGetListObject = Nothing
     Resume CleanExit
 End Function
@@ -168,6 +172,8 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error checking table presence: " & sheetName & "." & tableName, _
              Err.Description, Err.Number
+    MsgBox "Error checking table presence: " & sheetName & "." & tableName & "." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     IsTablePresent = False
     Resume CleanExit
 End Function
@@ -201,6 +207,8 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error checking column presence: " & columnName, Err.Description, Err.Number
+    MsgBox "Error checking column presence: " & columnName & "." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     IsColumnPresent = False
     Resume CleanExit
 End Function
@@ -243,6 +251,8 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error getting column index: " & columnName, Err.Description, Err.Number
+    MsgBox "Error getting column index: " & columnName & "." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     GetColumnIndexByName = 0
     Resume CleanExit
 End Function
@@ -285,6 +295,8 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error in SafeGetValue for column '" & columnName & "'", Err.Description, Err.Number
+    MsgBox "Error in SafeGetValue for column '" & columnName & "'." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     SafeGetValue = defaultValue
     Resume CleanExit
 End Function
@@ -321,6 +333,8 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error in SafeSetValue for column '" & columnName & "'", Err.Description, Err.Number
+    MsgBox "Error in SafeSetValue for column '" & columnName & "'." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     Resume CleanExit
 End Sub
 
@@ -350,6 +364,8 @@ CleanExit:
 EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in ListObjectToArray", Err.Description, Err.Number
+    MsgBox "Error in ListObjectToArray." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     Erase ListObjectToArray
     Resume CleanExit
 End Function
@@ -410,6 +426,8 @@ CleanExit:
 EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in ArrayToListObject", Err.Description, Err.Number
+    MsgBox "Error in ArrayToListObject." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     Resume CleanExit
 End Sub
 
@@ -477,6 +495,8 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error in BuildDictionaryByColumn for column '" & keyColumnName & "'", _
              Err.Description, Err.Number
+    MsgBox "Error in BuildDictionaryByColumn for column '" & keyColumnName & "'." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     Set BuildDictionaryByColumn = Nothing
     Resume CleanExit
 End Function
@@ -509,6 +529,8 @@ CleanExit:
 EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in NormalizeString", Err.Description, Err.Number
+    MsgBox "Error in NormalizeString." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     NormalizeString = value
     Resume CleanExit
 End Function
@@ -536,6 +558,8 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error in Utils_GenerateActivityId", Err.Description, Err.Number
+    MsgBox "Error in Utils_GenerateActivityId." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     Utils_GenerateActivityId = procName & "_ERROR"
     Resume CleanExit
 End Function
@@ -603,7 +627,8 @@ CleanExit:
 EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in Test_Core_Utils", Err.Description, Err.Number
-    MsgBox "Error in Test_Core_Utils: " & Err.Description, vbCritical, PROC_NAME
+    MsgBox "Error in Test_Core_Utils." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbCritical, PROC_NAME
     Resume CleanExit
 End Sub
 

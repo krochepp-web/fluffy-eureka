@@ -162,7 +162,7 @@ EH:
     TryLog PROC_NAME, Err.Number, Err.Description, "Registry refresh failed."
     If showUserMessage Then
         MsgBox "Registry refresh failed." & vbCrLf & vbCrLf & _
-               Err.Description & vbCrLf & vbCrLf & _
+               "Error " & Err.Number & ": " & Err.Description & vbCrLf & vbCrLf & _
                "If this mentions VBProject access, enable:" & vbCrLf & _
                "Trust Center > Macro Settings > Trust access to the VBA project object model.", _
                vbExclamation, "Registry Refresh"

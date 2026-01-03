@@ -107,7 +107,8 @@ EH:
     On Error GoTo 0
 
     If showUserMessage Then
-        MsgBox "Gate failed: " & Err.Description, vbExclamation, "Gate"
+        MsgBox "Gate failed." & vbCrLf & _
+               "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Gate"
     End If
 
     Gate_Ready = False
@@ -130,6 +131,8 @@ Private Function RunValidatorProc(ByVal fullyQualifiedProc As String, ByVal show
     Exit Function
 EH:
     msg = "Failed to run validator: " & fullyQualifiedProc & " :: " & Err.Description
+    MsgBox "Failed to run validator: " & fullyQualifiedProc & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Gate"
     RunValidatorProc = False
 End Function
 
