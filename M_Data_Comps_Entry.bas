@@ -6,7 +6,8 @@ Option Explicit
 '
 ' Purpose:
 '   Create a new Component record in Comps.TBL_COMPS with:
-'     - Gate check (blocks if workbook not ready)
+'     - Gate check (blocks if workbook not ready) / 
+'    - this is just a modification for the sake of having a modification so the PR Button appears...
 '     - Required-field prompting (ComponentDescription REQUIRED)
 '     - Forced-valid Supplier selection (search by SupplierName; forgiving matching)
 '     - Supplier picker shows numbered options when multiple matches
@@ -940,4 +941,5 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     Resume CleanExit
 End Sub
+
 
