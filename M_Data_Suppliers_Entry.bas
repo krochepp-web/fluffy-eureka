@@ -7,6 +7,8 @@ Option Explicit
 ' Purpose:
 '   Create new Supplier records using schema-driven requirements from SCHEMA.TBL_SCHEMA.
 '   Avoids hard-coded validation rules so changes are made by editing schema rows.
+'   Uses shared table helpers in M_Core_Utils for column checks, ID generation,
+'   and audit stamping.
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - Suppliers!TBL_SUPPLIERS with columns:
@@ -60,11 +62,11 @@ Public Sub NewSupplier()
     Set lo = ws.ListObjects(TBL_SUPPLIERS)
 
     '--- Validate table has the columns we will write (fail fast)
-    RequireColumn lo, "SupplierID"
-    RequireColumn lo, "SupplierName"
-    RequireColumn lo, "SupplierStatus"
-    RequireColumn lo, "ASLStatus"
-    RequireColumn lo, "SupplierDefaultLT"
+    M_Core_Utils.RequireColumn lo, "SupplierID"
+    M_Core_Utils.RequireColumn lo, "SupplierName"
+    M_Core_Utils.RequireColumn lo, "SupplierStatus"
+    M_Core_Utils.RequireColumn lo, "ASLStatus"
+    M_Core_Utils.RequireColumn lo, "SupplierDefaultLT"
     ' Optional but commonly present:
     ' SupplierContact
 
@@ -87,13 +89,13 @@ Public Sub NewSupplier()
     End If
 
     '--- Generate SupplierID (max+1) and enforce uniqueness
-    supplierId = Supplier_GenerateNextId(lo, SUPPLIER_ID_PREFIX, SUPPLIER_ID_PAD)
+    supplierId = M_Core_Utils.GenerateNextId(lo, "SupplierID", SUPPLIER_ID_PREFIX, SUPPLIER_ID_PAD)
     If Len(supplierId) = 0 Then Err.Raise vbObjectError + 802, PROC_NAME, "Failed to generate SupplierID."
-    If ValueExistsInColumn(lo, "SupplierID", supplierId) Then Err.Raise vbObjectError + 803, PROC_NAME, "Generated SupplierID already exists: " & supplierId
+    If M_Core_Utils.ValueExistsInColumn(lo, "SupplierID", supplierId) Then Err.Raise vbObjectError + 803, PROC_NAME, "Generated SupplierID already exists: " & supplierId
 
     '--- Create the row now, but be prepared to delete if validation fails
     Set lr = lo.ListRows.Add
-    SetByHeader lo, lr, "SupplierID", supplierId
+    M_Core_Utils.SetByHeader lo, lr, "SupplierID", supplierId
 
     '--- Prompt + validate fields per schema
     Dim v As Variant
@@ -102,39 +104,39 @@ Public Sub NewSupplier()
     v = Prompt_Validate_SchemaValue(sSupplierName, "Supplier Name", supplierId, "New Supplier")
     If Len(Trim$(CStr(v))) = 0 Then GoTo FailAndRollback
     If Schema_IsUnique(sSupplierName) Then
-        If ValueExistsInColumn(lo, "SupplierName", CStr(v)) Then
+        If M_Core_Utils.ValueExistsInColumn(lo, "SupplierName", CStr(v)) Then
             MsgBox "SupplierName must be unique. '" & CStr(v) & "' already exists.", vbExclamation, "New Supplier"
             GoTo FailAndRollback
         End If
     End If
-    SetByHeader lo, lr, "SupplierName", v
+    M_Core_Utils.SetByHeader lo, lr, "SupplierName", v
 
     ' SupplierStatus (Required + HelperName list)
     v = Prompt_Validate_SchemaValue(sSupplierStatus, "Supplier Status", supplierId, "New Supplier")
     If Len(Trim$(CStr(v))) = 0 Then GoTo FailAndRollback
-    SetByHeader lo, lr, "SupplierStatus", v
+    M_Core_Utils.SetByHeader lo, lr, "SupplierStatus", v
 
     ' ASLStatus (Required + HelperName list)
     v = Prompt_Validate_SchemaValue(sASLStatus, "ASL Status", supplierId, "New Supplier")
     If Len(Trim$(CStr(v))) = 0 Then GoTo FailAndRollback
-    SetByHeader lo, lr, "ASLStatus", v
+    M_Core_Utils.SetByHeader lo, lr, "ASLStatus", v
 
     ' SupplierContact (optional; not in your “four rows”, but exists in schema—keep it simple)
-    If ColumnExists(lo, "SupplierContact") Then
+    If M_Core_Utils.ColumnExists(lo, "SupplierContact") Then
         Dim contactName As String
         contactName = Trim$(InputBox("Supplier Contact (optional).", "New Supplier (" & supplierId & ")"))
-        SetByHeader lo, lr, "SupplierContact", contactName
+        M_Core_Utils.SetByHeader lo, lr, "SupplierContact", contactName
     End If
 
     ' SupplierDefaultLT (Required Integer; Min/Max only if present in schema)
     v = Prompt_Validate_SchemaValue(sSupplierLT, "Default Lead Time (days)", supplierId, "New Supplier")
     If Len(Trim$(CStr(v))) = 0 Then GoTo FailAndRollback
-    SetByHeader lo, lr, "SupplierDefaultLT", v
+    M_Core_Utils.SetByHeader lo, lr, "SupplierDefaultLT", v
 
     '--- Audit stamps if those columns exist
-    userId = SafeUserId()
+    userId = M_Core_Utils.GetUserNameSafe()
     nowStamp = Now
-    StampAuditIfPresent lo, lr, userId, nowStamp
+    M_Core_Utils.StampAuditIfPresent lo, lr, userId, nowStamp
 
     M_Core_Logging.LogInfo PROC_NAME, "Created Supplier", "SupplierID=" & supplierId & "; ModuleVersion=" & MODULE_VERSION
     Exit Sub
@@ -270,9 +272,9 @@ Private Function SchemaRow_Get(ByVal tabName As String, ByVal tableName As Strin
     Set ws = ThisWorkbook.Worksheets("SCHEMA")
     Set lo = ws.ListObjects("TBL_SCHEMA")
 
-    idxTab = GetColIndexOrRaise(lo, "TAB_NAME")
-    idxTable = GetColIndexOrRaise(lo, "TABLE_NAME")
-    idxCol = GetColIndexOrRaise(lo, "COLUMN_HEADER")
+    idxTab = M_Core_Utils.GetColIndexOrRaise(lo, "TAB_NAME")
+    idxTable = M_Core_Utils.GetColIndexOrRaise(lo, "TABLE_NAME")
+    idxCol = M_Core_Utils.GetColIndexOrRaise(lo, "COLUMN_HEADER")
 
     matchCount = 0
     For Each r In lo.ListRows
@@ -332,117 +334,6 @@ Private Function Schema_HasValue(ByVal sRow As Object, ByVal key As String) As B
     Schema_HasValue = Not IsBlankOrError(sRow(key))
 End Function
 
-'===============================================================================
-' SupplierID generation (MAX trailing number + 1)
-'===============================================================================
-
-Private Function Supplier_GenerateNextId(ByVal loSuppliers As ListObject, ByVal prefix As String, ByVal padDigits As Long) As String
-    Dim maxN As Long
-    Dim arr As Variant
-    Dim i As Long
-    Dim s As String
-    Dim n As Long
-    Dim idx As Long
-
-    maxN = 0
-    idx = GetColIndex(loSuppliers, "SupplierID")
-    If idx = 0 Then Exit Function
-
-    If loSuppliers.DataBodyRange Is Nothing Then
-        Supplier_GenerateNextId = prefix & Right$(String$(padDigits, "0") & "1", padDigits)
-        Exit Function
-    End If
-
-    arr = loSuppliers.ListColumns(idx).DataBodyRange.value
-
-    If IsArray(arr) Then
-        For i = 1 To UBound(arr, 1)
-            s = Trim$(CStr(arr(i, 1)))
-            n = TrailingNumber(s)
-            If n > maxN Then maxN = n
-        Next i
-    Else
-        s = Trim$(CStr(arr))
-        n = TrailingNumber(s)
-        If n > maxN Then maxN = n
-    End If
-
-    Supplier_GenerateNextId = prefix & Right$(String$(padDigits, "0") & CStr(maxN + 1), padDigits)
-End Function
-
-Private Function TrailingNumber(ByVal s As String) As Long
-    Dim i As Long
-    Dim ch As String
-    Dim digits As String
-
-    digits = vbNullString
-    For i = Len(s) To 1 Step -1
-        ch = Mid$(s, i, 1)
-        If ch Like "#" Then
-            digits = ch & digits
-        Else
-            Exit For
-        End If
-    Next i
-
-    If Len(digits) = 0 Then
-        TrailingNumber = 0
-    Else
-        TrailingNumber = CLng(digits)
-    End If
-End Function
-
-'===============================================================================
-' Table + validation helpers
-'===============================================================================
-
-Private Sub RequireColumn(ByVal lo As ListObject, ByVal header As String)
-    If GetColIndex(lo, header) = 0 Then
-        Err.Raise vbObjectError + 840, "RequireColumn", "Missing column '" & header & "' in table '" & lo.Name & "'."
-    End If
-End Sub
-
-Private Function ColumnExists(ByVal lo As ListObject, ByVal header As String) As Boolean
-    ColumnExists = (GetColIndex(lo, header) > 0)
-End Function
-
-Private Sub SetByHeader(ByVal lo As ListObject, ByVal lr As ListRow, ByVal header As String, ByVal v As Variant)
-    Dim idx As Long
-    idx = GetColIndex(lo, header)
-    If idx = 0 Then Err.Raise vbObjectError + 841, "SetByHeader", "Missing column '" & header & "' in " & lo.Name
-    lr.Range.Cells(1, idx).value = v
-End Sub
-
-Private Function GetColIndex(ByVal lo As ListObject, ByVal header As String) As Long
-    Dim lc As ListColumn
-    For Each lc In lo.ListColumns
-        If StrComp(lc.Name, header, vbTextCompare) = 0 Then
-            GetColIndex = lc.Index
-            Exit Function
-        End If
-    Next lc
-    GetColIndex = 0
-End Function
-
-Private Function GetColIndexOrRaise(ByVal lo As ListObject, ByVal header As String) As Long
-    Dim idx As Long
-    idx = GetColIndex(lo, header)
-    If idx = 0 Then Err.Raise vbObjectError + 842, "GetColIndexOrRaise", "Schema missing header: " & header
-    GetColIndexOrRaise = idx
-End Function
-
-Private Function ValueExistsInColumn(ByVal lo As ListObject, ByVal header As String, ByVal valueText As String) As Boolean
-    Dim idx As Long
-    Dim rng As Range
-
-    ValueExistsInColumn = False
-    idx = GetColIndex(lo, header)
-    If idx = 0 Then Exit Function
-    If lo.DataBodyRange Is Nothing Then Exit Function
-
-    Set rng = lo.ListColumns(idx).DataBodyRange
-    ValueExistsInColumn = (Application.WorksheetFunction.CountIf(rng, valueText) > 0)
-End Function
 
 Private Function ValueInNamedRange(ByVal wb As Workbook, ByVal rangeName As String, ByVal valueText As String) As Boolean
     Dim rng As Range
@@ -517,22 +408,4 @@ Private Function ToBool(ByVal v As Variant, ByVal defaultVal As Boolean) As Bool
             ToBool = defaultVal
     End Select
 End Function
-
-Private Function SafeUserId() As String
-    Dim u As String
-    u = Trim$(Environ$("Username"))
-    If Len(u) = 0 Then u = "UNKNOWN"
-    SafeUserId = u
-End Function
-
-Private Sub StampAuditIfPresent(ByVal lo As ListObject, ByVal lr As ListRow, ByVal userId As String, ByVal ts As Date)
-    ' Uses your existing constants (COL_CREATED_AT etc.). If those columns don’t exist, it silently skips.
-    On Error Resume Next
-    If ColumnExists(lo, COL_CREATED_AT) Then SetByHeader lo, lr, COL_CREATED_AT, ts
-    If ColumnExists(lo, COL_CREATED_BY) Then SetByHeader lo, lr, COL_CREATED_BY, userId
-    If ColumnExists(lo, COL_UPDATED_AT) Then SetByHeader lo, lr, COL_UPDATED_AT, ts
-    If ColumnExists(lo, COL_UPDATED_BY) Then SetByHeader lo, lr, COL_UPDATED_BY, userId
-    On Error GoTo 0
-End Sub
-
 

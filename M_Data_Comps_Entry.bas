@@ -17,6 +17,7 @@ Option Explicit
 '     - IMSStatus default is sourced from TBL_SCHEMA.DefaultValue when available
 '     - IsBuildable computed at creation
 '     - If macro ends without creating a record, user gets a brief message
+'     - Uses M_Core_Utils for shared table helpers, ID generation, and audit logic
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - Comps sheet:      TBL_COMPS
@@ -120,27 +121,27 @@ Public Sub UI_New_Component()
     Set loSupp = wsSupp.ListObjects(LO_SUPPLIERS)
 
     ' Guards: required columns
-    RequireColumn loComps, "CompID"
-    RequireColumn loComps, "OurPN"
-    RequireColumn loComps, "OurRev"
-    RequireColumn loComps, "ComponentDescription"
-    RequireColumn loComps, "SupplierID"
-    RequireColumn loComps, "SupplierName"
+    M_Core_Utils.RequireColumn loComps, "CompID"
+    M_Core_Utils.RequireColumn loComps, "OurPN"
+    M_Core_Utils.RequireColumn loComps, "OurRev"
+    M_Core_Utils.RequireColumn loComps, "ComponentDescription"
+    M_Core_Utils.RequireColumn loComps, "SupplierID"
+    M_Core_Utils.RequireColumn loComps, "SupplierName"
 
-    RequireColumn loComps, "UOM"
-    RequireColumn loComps, "RevStatus"
-    RequireColumn loComps, "IMSStatus"
-    RequireColumn loComps, "MOQ1"
-    RequireColumn loComps, "CostPerUOMMOQ1"
-    RequireColumn loComps, "CreatedAt"
-    RequireColumn loComps, "CreatedBy"
-    RequireColumn loComps, "UpdatedAt"
-    RequireColumn loComps, "UpdatedBy"
-    RequireColumn loComps, "IsBuildable"
+    M_Core_Utils.RequireColumn loComps, "UOM"
+    M_Core_Utils.RequireColumn loComps, "RevStatus"
+    M_Core_Utils.RequireColumn loComps, "IMSStatus"
+    M_Core_Utils.RequireColumn loComps, "MOQ1"
+    M_Core_Utils.RequireColumn loComps, "CostPerUOMMOQ1"
+    M_Core_Utils.RequireColumn loComps, "CreatedAt"
+    M_Core_Utils.RequireColumn loComps, "CreatedBy"
+    M_Core_Utils.RequireColumn loComps, "UpdatedAt"
+    M_Core_Utils.RequireColumn loComps, "UpdatedBy"
+    M_Core_Utils.RequireColumn loComps, "IsBuildable"
 
-    RequireColumn loSupp, "SupplierID"
-    RequireColumn loSupp, "SupplierName"
-    RequireColumn loSupp, "SupplierDefaultLT"
+    M_Core_Utils.RequireColumn loSupp, "SupplierID"
+    M_Core_Utils.RequireColumn loSupp, "SupplierName"
+    M_Core_Utils.RequireColumn loSupp, "SupplierDefaultLT"
 
     ' Guards: required named ranges
     RequireNamedRange "NR_UOM"
@@ -153,25 +154,25 @@ Public Sub UI_New_Component()
     If Len(imsDefault) = 0 Then imsDefault = DEFAULT_IMSSTATUS_FALLBACK
 
     ' Generate CompID
-    compId = GenerateNextId(loComps, "CompID", COMP_ID_PREFIX, COMP_ID_PAD)
+    compId = M_Core_Utils.GenerateNextId(loComps, "CompID", COMP_ID_PREFIX, COMP_ID_PAD)
     If Len(compId) = 0 Then Err.Raise vbObjectError + 5100, PROC_NAME, "Failed to generate CompID."
-    If ValueExistsInColumn(loComps, "CompID", compId) Then Err.Raise vbObjectError + 5101, PROC_NAME, "Generated CompID already exists: " & compId
+    If M_Core_Utils.ValueExistsInColumn(loComps, "CompID", compId) Then Err.Raise vbObjectError + 5101, PROC_NAME, "Generated CompID already exists: " & compId
 
     ' Create row now; rollback on cancel/error
     Set lr = loComps.ListRows.Add
-    SetByHeader loComps, lr, "CompID", compId
+    M_Core_Utils.SetByHeader loComps, lr, "CompID", compId
 
     ' Audit fields
     createdAt = Now
-    createdBy = GetUserNameSafe()
+    createdBy = M_Core_Utils.GetUserNameSafe()
 
-    SetByHeader loComps, lr, "CreatedAt", createdAt
-    SetByHeader loComps, lr, "CreatedBy", createdBy
-    SetByHeader loComps, lr, "UpdatedAt", createdAt
-    SetByHeader loComps, lr, "UpdatedBy", createdBy
+    M_Core_Utils.SetByHeader loComps, lr, "CreatedAt", createdAt
+    M_Core_Utils.SetByHeader loComps, lr, "CreatedBy", createdBy
+    M_Core_Utils.SetByHeader loComps, lr, "UpdatedAt", createdAt
+    M_Core_Utils.SetByHeader loComps, lr, "UpdatedBy", createdBy
 
     ' Required: OurPN / OurRev
-    ourPN = Trim$(InputBox("Enter OurPN (required).", "New Component (" & compId & ")"))
+    ourPN = Trim$(InputBox("Enter OurPN (required; no leading/trailing spaces).", "New Component (" & compId & ")"))
     If Len(ourPN) = 0 Then
         abortedReason = "OurPN not provided."
         GoTo FailRollback
@@ -192,8 +193,8 @@ Public Sub UI_New_Component()
         GoTo FailRollback
     End If
 
-    SetByHeader loComps, lr, "OurPN", ourPN
-    SetByHeader loComps, lr, "OurRev", ourRev
+    M_Core_Utils.SetByHeader loComps, lr, "OurPN", ourPN
+    M_Core_Utils.SetByHeader loComps, lr, "OurRev", ourRev
 
     ' Required: ComponentDescription
     desc = Prompt_RequiredText("Enter ComponentDescription (required).", "New Component (" & compId & ")", DEFAULT_DESC)
@@ -201,7 +202,7 @@ Public Sub UI_New_Component()
         abortedReason = "ComponentDescription not provided."
         GoTo FailRollback
     End If
-    SetByHeader loComps, lr, "ComponentDescription", desc
+    M_Core_Utils.SetByHeader loComps, lr, "ComponentDescription", desc
 
     ' Supplier selection (forced)
     If Not SupplierPick_ByName(loSupp, pickId, pickName, pickDfltLT) Then
@@ -209,11 +210,11 @@ Public Sub UI_New_Component()
         GoTo FailRollback
     End If
 
-    SetByHeader loComps, lr, "SupplierID", pickId
-    SetByHeader loComps, lr, "SupplierName", pickName
+    M_Core_Utils.SetByHeader loComps, lr, "SupplierID", pickId
+    M_Core_Utils.SetByHeader loComps, lr, "SupplierName", pickName
 
-    If ColumnExists(loComps, "SupplierLeadTime") Then
-        SetByHeader loComps, lr, "SupplierLeadTime", pickDfltLT
+    If M_Core_Utils.ColumnExists(loComps, "SupplierLeadTime") Then
+        M_Core_Utils.SetByHeader loComps, lr, "SupplierLeadTime", pickDfltLT
     End If
 
     ' Required list fields
@@ -222,21 +223,21 @@ Public Sub UI_New_Component()
         abortedReason = "UOM not selected."
         GoTo FailRollback
     End If
-    SetByHeader loComps, lr, "UOM", uom
+    M_Core_Utils.SetByHeader loComps, lr, "UOM", uom
 
     revStatus = Prompt_ListValue("NR_RevStatus", "Select RevStatus (required).", "New Component (" & compId & ")", DEFAULT_REVSTATUS)
     If Len(revStatus) = 0 Then
         abortedReason = "RevStatus not selected."
         GoTo FailRollback
     End If
-    SetByHeader loComps, lr, "RevStatus", revStatus
+    M_Core_Utils.SetByHeader loComps, lr, "RevStatus", revStatus
 
     imsStatus = Prompt_ListValue("NR_IMSStatus", "Select IMSStatus (required).", "New Component (" & compId & ")", imsDefault)
     If Len(imsStatus) = 0 Then
         abortedReason = "IMSStatus not selected."
         GoTo FailRollback
     End If
-    SetByHeader loComps, lr, "IMSStatus", imsStatus
+    M_Core_Utils.SetByHeader loComps, lr, "IMSStatus", imsStatus
 
     ' Required numeric fields
     moq1 = Prompt_Long("Enter MOQ1 (required).", "New Component (" & compId & ")", DEFAULT_MOQ1, 1, 1000000)
@@ -244,24 +245,24 @@ Public Sub UI_New_Component()
         abortedReason = "MOQ1 not provided."
         GoTo FailRollback
     End If
-    SetByHeader loComps, lr, "MOQ1", moq1
+    M_Core_Utils.SetByHeader loComps, lr, "MOQ1", moq1
 
     costMOQ1 = Prompt_Double("Enter CostPerUOMMOQ1 (required).", "New Component (" & compId & ")", DEFAULT_COST_MOQ1, 0, 1000000000#)
     If costMOQ1 < 0 Then
         abortedReason = "CostPerUOMMOQ1 not provided."
         GoTo FailRollback
     End If
-    SetByHeader loComps, lr, "CostPerUOMMOQ1", costMOQ1
+    M_Core_Utils.SetByHeader loComps, lr, "CostPerUOMMOQ1", costMOQ1
 
     ' Optional: ComponentLT
-    If ColumnExists(loComps, "ComponentLT") Then
+    If M_Core_Utils.ColumnExists(loComps, "ComponentLT") Then
         Dim ltVal As Long
         ltVal = Prompt_Long("Enter ComponentLT (days).", "New Component (" & compId & ")", CLng(val(CStr(pickDfltLT))), 0, 3650)
         If ltVal = -1 Then
             abortedReason = "ComponentLT not provided."
             GoTo FailRollback
         End If
-        SetByHeader loComps, lr, "ComponentLT", ltVal
+        M_Core_Utils.SetByHeader loComps, lr, "ComponentLT", ltVal
     End If
 
     ' IsBuildable (computed)
@@ -278,7 +279,7 @@ Public Sub UI_New_Component()
     If moq1 < 1 Then buildable = False
     If costMOQ1 < 0 Then buildable = False
 
-    SetByHeader loComps, lr, "IsBuildable", buildable
+    M_Core_Utils.SetByHeader loComps, lr, "IsBuildable", buildable
 
     createdOk = True
     MsgBox "Component created: " & compId & vbCrLf & _
@@ -343,10 +344,10 @@ Private Function GetSchemaDefaultValue(ByVal tabName As String, ByVal tableName 
     If lo Is Nothing Then Exit Function
     If lo.DataBodyRange Is Nothing Then Exit Function
 
-    idxTab = GetColIndex(lo, H_TAB)
-    idxTbl = GetColIndex(lo, H_TBL)
-    idxCol = GetColIndex(lo, H_COL)
-    idxDef = GetColIndex(lo, H_DEF)
+    idxTab = M_Core_Utils.GetColIndex(lo, H_TAB)
+    idxTbl = M_Core_Utils.GetColIndex(lo, H_TBL)
+    idxCol = M_Core_Utils.GetColIndex(lo, H_COL)
+    idxDef = M_Core_Utils.GetColIndex(lo, H_DEF)
     If idxTab = 0 Or idxTbl = 0 Or idxCol = 0 Or idxDef = 0 Then Exit Function
 
     arr = lo.DataBodyRange.value
@@ -575,14 +576,6 @@ Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
     End If
 End Function
 
-Private Function GetUserNameSafe() As String
-    Dim u As String
-    u = Trim$(Environ$("Username"))
-    If Len(u) = 0 Then u = Application.userName
-    If Len(Trim$(u)) = 0 Then u = "UNKNOWN"
-    GetUserNameSafe = u
-End Function
-
 '==========================
 ' SUPPLIER PICKER (IMPROVED)
 '==========================
@@ -617,9 +610,9 @@ Private Function SupplierPick_ByName(ByVal loSupp As ListObject, ByRef supplierI
         Exit Function
     End If
 
-    idxId = GetColIndex(loSupp, "SupplierID")
-    idxName = GetColIndex(loSupp, "SupplierName")
-    idxLT = GetColIndex(loSupp, "SupplierDefaultLT")
+    idxId = M_Core_Utils.GetColIndex(loSupp, "SupplierID")
+    idxName = M_Core_Utils.GetColIndex(loSupp, "SupplierName")
+    idxLT = M_Core_Utils.GetColIndex(loSupp, "SupplierDefaultLT")
 
     If idxId = 0 Or idxName = 0 Or idxLT = 0 Then
         MsgBox "Supplier picker cannot run because required headers were not found." & vbCrLf & _
@@ -792,86 +785,6 @@ Private Function CollapseSpaces(ByVal s As String) As String
     CollapseSpaces = t
 End Function
 
-'==========================
-' GENERIC TABLE HELPERS
-'==========================
-Private Sub RequireColumn(ByVal lo As ListObject, ByVal header As String)
-    If GetColIndex(lo, header) = 0 Then
-        Err.Raise vbObjectError + 5200, "RequireColumn", "Missing column '" & header & "' in table '" & lo.Name & "'."
-    End If
-End Sub
-
-Private Function ColumnExists(ByVal lo As ListObject, ByVal header As String) As Boolean
-    ColumnExists = (GetColIndex(lo, header) > 0)
-End Function
-
-Private Sub SetByHeader(ByVal lo As ListObject, ByVal lr As ListRow, ByVal header As String, ByVal v As Variant)
-    Dim idx As Long
-    idx = GetColIndex(lo, header)
-    If idx = 0 Then Err.Raise vbObjectError + 5201, "SetByHeader", "Missing column '" & header & "' in table '" & lo.Name & "'."
-    lr.Range.Cells(1, idx).value = v
-End Sub
-
-Private Function GetColIndex(ByVal lo As ListObject, ByVal header As String) As Long
-    Dim lc As ListColumn
-    For Each lc In lo.ListColumns
-        If StrComp(lc.Name, header, vbTextCompare) = 0 Then
-            GetColIndex = lc.Index
-            Exit Function
-        End If
-    Next lc
-    GetColIndex = 0
-End Function
-
-Private Function ValueExistsInColumn(ByVal lo As ListObject, ByVal header As String, ByVal valueText As String) As Boolean
-    Dim idx As Long, rng As Range
-    ValueExistsInColumn = False
-    idx = GetColIndex(lo, header)
-    If idx = 0 Then Exit Function
-    If lo.DataBodyRange Is Nothing Then Exit Function
-    Set rng = lo.ListColumns(idx).DataBodyRange
-    ValueExistsInColumn = (Application.WorksheetFunction.CountIf(rng, valueText) > 0)
-End Function
-
-Private Function GenerateNextId(ByVal lo As ListObject, ByVal header As String, ByVal prefix As String, ByVal padDigits As Long) As String
-    Dim idx As Long, maxN As Long
-    Dim arr As Variant
-    Dim i As Long, s As String, n As Long
-
-    GenerateNextId = vbNullString
-    idx = GetColIndex(lo, header)
-    If idx = 0 Then Exit Function
-
-    maxN = 0
-    If Not lo.DataBodyRange Is Nothing Then
-        arr = lo.ListColumns(idx).DataBodyRange.value
-        For i = 1 To UBound(arr, 1)
-            s = Trim$(CStr(arr(i, 1)))
-            n = TrailingNumber(s)
-            If n > maxN Then maxN = n
-        Next i
-    End If
-
-    GenerateNextId = prefix & Right$(String$(padDigits, "0") & CStr(maxN + 1), padDigits)
-End Function
-
-Private Function TrailingNumber(ByVal s As String) As Long
-    Dim i As Long, ch As String, digits As String
-    digits = vbNullString
-    For i = Len(s) To 1 Step -1
-        ch = Mid$(s, i, 1)
-        If ch Like "#" Then
-            digits = ch & digits
-        Else
-            Exit For
-        End If
-    Next i
-    If Len(digits) = 0 Then
-        TrailingNumber = 0
-    Else
-        TrailingNumber = CLng(digits)
-    End If
-End Function
 
 Private Function PNRevComboExists(ByVal lo As ListObject, ByVal ourPN As String, ByVal ourRev As String) As Boolean
     Dim idxPN As Long, idxRev As Long
@@ -881,8 +794,8 @@ Private Function PNRevComboExists(ByVal lo As ListObject, ByVal ourPN As String,
     PNRevComboExists = False
     If lo.DataBodyRange Is Nothing Then Exit Function
 
-    idxPN = GetColIndex(lo, "OurPN")
-    idxRev = GetColIndex(lo, "OurRev")
+    idxPN = M_Core_Utils.GetColIndex(lo, "OurPN")
+    idxRev = M_Core_Utils.GetColIndex(lo, "OurRev")
     If idxPN = 0 Or idxRev = 0 Then Exit Function
 
     arrPN = lo.ListColumns(idxPN).DataBodyRange.value
@@ -914,7 +827,7 @@ Private Sub SortTable_ByColumn(ByVal lo As ListObject, ByVal header As String, O
     Set ws = lo.Parent
 
     ' Ensure the column exists
-    If GetColIndex(lo, header) = 0 Then
+    If M_Core_Utils.GetColIndex(lo, header) = 0 Then
         Err.Raise vbObjectError + 5900, PROC_NAME, "Sort column not found: '" & header & "' in table '" & lo.Name & "'."
     End If
 

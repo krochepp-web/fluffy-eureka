@@ -258,6 +258,122 @@ EH:
 End Function
 
 '===============================================================================
+' Public API - Common table helpers (shared across entry modules)
+'===============================================================================
+
+Public Sub RequireColumn(ByVal lo As ListObject, ByVal header As String)
+    If GetColIndex(lo, header) = 0 Then
+        Err.Raise vbObjectError + 5200, "RequireColumn", "Missing column '" & header & "' in table '" & lo.Name & "'."
+    End If
+End Sub
+
+Public Function ColumnExists(ByVal lo As ListObject, ByVal header As String) As Boolean
+    ColumnExists = (GetColIndex(lo, header) > 0)
+End Function
+
+Public Sub SetByHeader(ByVal lo As ListObject, ByVal lr As ListRow, ByVal header As String, ByVal v As Variant)
+    Dim idx As Long
+    idx = GetColIndex(lo, header)
+    If idx = 0 Then Err.Raise vbObjectError + 5201, "SetByHeader", "Missing column '" & header & "' in table '" & lo.Name & "'."
+    lr.Range.Cells(1, idx).value = v
+End Sub
+
+Public Function GetColIndex(ByVal lo As ListObject, ByVal header As String) As Long
+    GetColIndex = GetColumnIndexByName(lo, header, False)
+End Function
+
+Public Function GetColIndexOrRaise(ByVal lo As ListObject, ByVal header As String) As Long
+    Dim idx As Long
+    idx = GetColIndex(lo, header)
+    If idx = 0 Then Err.Raise vbObjectError + 842, "GetColIndexOrRaise", "Schema missing header: " & header
+    GetColIndexOrRaise = idx
+End Function
+
+Public Function ValueExistsInColumn(ByVal lo As ListObject, ByVal header As String, ByVal valueText As String) As Boolean
+    Dim idx As Long
+    Dim rng As Range
+
+    ValueExistsInColumn = False
+    idx = GetColIndex(lo, header)
+    If idx = 0 Then Exit Function
+    If lo.DataBodyRange Is Nothing Then Exit Function
+
+    Set rng = lo.ListColumns(idx).DataBodyRange
+    ValueExistsInColumn = (Application.WorksheetFunction.CountIf(rng, valueText) > 0)
+End Function
+
+Public Function GenerateNextId(ByVal lo As ListObject, ByVal header As String, ByVal prefix As String, ByVal padDigits As Long) As String
+    Dim idx As Long
+    Dim maxN As Long
+    Dim arr As Variant
+    Dim i As Long
+    Dim s As String
+    Dim n As Long
+
+    GenerateNextId = vbNullString
+    idx = GetColIndex(lo, header)
+    If idx = 0 Then Exit Function
+
+    maxN = 0
+    If Not lo.DataBodyRange Is Nothing Then
+        arr = lo.ListColumns(idx).DataBodyRange.value
+        If IsArray(arr) Then
+            For i = 1 To UBound(arr, 1)
+                s = Trim$(CStr(arr(i, 1)))
+                n = TrailingNumber(s)
+                If n > maxN Then maxN = n
+            Next i
+        Else
+            s = Trim$(CStr(arr))
+            n = TrailingNumber(s)
+            If n > maxN Then maxN = n
+        End If
+    End If
+
+    GenerateNextId = prefix & Right$(String$(padDigits, "0") & CStr(maxN + 1), padDigits)
+End Function
+
+Public Function GetUserNameSafe() As String
+    Dim u As String
+    u = Trim$(Environ$("Username"))
+    If Len(u) = 0 Then u = Application.userName
+    If Len(Trim$(u)) = 0 Then u = "UNKNOWN"
+    GetUserNameSafe = u
+End Function
+
+Public Sub StampAuditIfPresent(ByVal lo As ListObject, ByVal lr As ListRow, ByVal userId As String, ByVal ts As Date)
+    ' Uses existing constants (COL_CREATED_AT etc.). If columns don’t exist, it silently skips.
+    On Error Resume Next
+    If ColumnExists(lo, COL_CREATED_AT) Then SetByHeader lo, lr, COL_CREATED_AT, ts
+    If ColumnExists(lo, COL_CREATED_BY) Then SetByHeader lo, lr, COL_CREATED_BY, userId
+    If ColumnExists(lo, COL_UPDATED_AT) Then SetByHeader lo, lr, COL_UPDATED_AT, ts
+    If ColumnExists(lo, COL_UPDATED_BY) Then SetByHeader lo, lr, COL_UPDATED_BY, userId
+    On Error GoTo 0
+End Sub
+
+Private Function TrailingNumber(ByVal s As String) As Long
+    Dim i As Long
+    Dim ch As String
+    Dim digits As String
+
+    digits = vbNullString
+    For i = Len(s) To 1 Step -1
+        ch = Mid$(s, i, 1)
+        If ch Like "#" Then
+            digits = ch & digits
+        Else
+            Exit For
+        End If
+    Next i
+
+    If Len(digits) = 0 Then
+        TrailingNumber = 0
+    Else
+        TrailingNumber = CLng(digits)
+    End If
+End Function
+
+'===============================================================================
 ' Public API - Safe value getters/setters
 '===============================================================================
 
