@@ -158,6 +158,8 @@ Public Sub LogEvent( _
         ' Other (spare)
         SafeSetColumnValue loLog, newRow, COL_LOG_OTHER, vbNullString
     End With
+
+    SortLogTableByTimestamp loLog
     
 CleanExit:
     mIsLogging = False
@@ -232,6 +234,38 @@ Private Sub SafeSetColumnValue( _
             Exit For
         End If
     Next lc
+    
+CleanExit:
+    On Error GoTo 0
+End Sub
+
+' Keep newest log entries at the top by sorting Timestamp descending.
+Private Sub SortLogTableByTimestamp(ByVal lo As ListObject)
+    Dim tsColumn As ListColumn
+    
+    On Error GoTo CleanExit
+    
+    If lo Is Nothing Then
+        GoTo CleanExit
+    End If
+    
+    Set tsColumn = lo.ListColumns(COL_LOG_TIMESTAMP)
+    If tsColumn Is Nothing Then
+        GoTo CleanExit
+    End If
+    
+    If lo.ListRows.Count <= 1 Then
+        GoTo CleanExit
+    End If
+    
+    With lo.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=tsColumn.Range, _
+            SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
+        .Header = xlYes
+        .MatchCase = False
+        .Apply
+    End With
     
 CleanExit:
     On Error GoTo 0
