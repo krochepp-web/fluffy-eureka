@@ -11,7 +11,7 @@ Option Explicit
 '     - Table (ListObject) name constants (TBL_*)
 '     - A small set of key column names on core tables
 '
-' Inputs (Tabs/Tables/Columns):
+' Inputs (Tabs/Tables/Headers):
 '   - Uses ThisWorkbook.Worksheets and ListObjects to discover actual sheets
 '     and tables.
 '   - Uses constants defined in M_Core_Constants:
@@ -30,7 +30,7 @@ Option Explicit
 '
 ' Preconditions:
 '   - M_Core_Constants module is present and compiled.
-'   - Workbook is expected to conform to Schema 3.2.0.
+'   - Workbook is expected to conform to Schema 3.4.3.
 '
 ' Postconditions:
 '   - Does not modify business data; only writes the Core_Tests sheet.
