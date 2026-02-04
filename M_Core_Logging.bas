@@ -6,11 +6,11 @@ Option Explicit
 '
 ' Purpose:
 '   Centralized logging utility for the Tracker workbook. Appends rows to
-'   Log.TBL_LOG using the schema defined in Schema 3.2.0. All modules should
+'   Log.TBL_LOG using the schema defined in Schema 3.4.3. All modules should
 '   call LogEvent (or the LogInfo/LogWarn/LogError wrappers) instead of
 '   writing to the log table directly.
 '
-' Inputs (Tabs/Tables/Columns):
+' Inputs (Tabs/Tables/Headers):
 '   - Sheet:  SH_LOG
 '   - Table:  TBL_LOG
 '   - Columns (from M_Core_Constants):
@@ -27,7 +27,7 @@ Option Explicit
 '       COL_LOG_VERSION
 '       COL_LOG_OTHER
 '
-' Outputs / Side Effects:
+' Outputs / Side effects:
 '   - Appends a single row to Log.TBL_LOG for each call to LogEvent.
 '   - Does not modify any other tables or sheets.
 '

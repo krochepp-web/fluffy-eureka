@@ -7,9 +7,9 @@ Option Explicit
 '   Centralized constants for workbook metadata, sheet names, table names,
 '   key column names, audit column names, log levels, and shared messages.
 '   This module eliminates magic strings in code and keeps all naming aligned
-'   with Schema 3.2.0 (TBL_SCHEMA on SCHEMA tab).
+'   with Schema 3.4.3 (TBL_SCHEMA on SCHEMA tab).
 '
-' Inputs (tabs/tables/headers):
+' Inputs (Tabs/Tables/Headers):
 '   - None (this module does not read from the workbook).
 '
 ' Outputs / Side effects:
@@ -21,7 +21,7 @@ Option Explicit
 '       * Log levels and generic messages
 '
 ' Preconditions:
-'   - Schema 3.2.0 is the active, enforced schema in SCHEMA!TBL_SCHEMA.
+'   - Schema 3.4.3 is the active, enforced schema in SCHEMA!TBL_SCHEMA.
 '
 ' Postconditions:
 '   - None at runtime; this is a static configuration module.
@@ -39,7 +39,7 @@ Option Explicit
 '===============================================================================
 
 Public Const APP_VERSION      As String = "0.1.0"
-Public Const SCHEMA_VERSION   As String = "3.2.0"
+Public Const SCHEMA_VERSION   As String = "3.4.3"
 
 '===============================================================================
 ' Sheet (Tab) Names  - must match workbook tabs exactly
