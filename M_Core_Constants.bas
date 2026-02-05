@@ -86,6 +86,15 @@ Public Const TBL_BOM_PDM001   As String = "TBL_BOM_PDM001"
 Public Const TBL_BOM_TEMPLATE As String = "TBL_BOM_TEMPLATE"
 
 '===============================================================================
+' BOM Naming Conventions
+'===============================================================================
+
+Public Const BOM_SHEET_PREFIX As String = "BOM_"
+Public Const BOM_TABLE_PREFIX As String = "TBL_BOM_"
+Public Const BOM_ID_PREFIX    As String = "BOM-"
+Public Const BOM_ID_PAD       As Long = 4
+
+'===============================================================================
 ' Common Column Names - Keys / IDs
 '===============================================================================
 

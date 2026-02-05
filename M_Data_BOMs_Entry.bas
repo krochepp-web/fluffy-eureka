@@ -44,19 +44,6 @@ Option Explicit
 Public Sub UI_Create_BOM_For_Assembly()
     Const PROC_NAME As String = "M_Data_BOMs_Entry.UI_Create_BOM_For_Assembly"
 
-    Const SH_TEMPLATE As String = "BOM_TEMPLATE"
-    Const LO_TEMPLATE As String = "TBL_BOM_TEMPLATE"
-
-    Const SH_BOMS As String = "BOMS"
-    Const LO_BOMS As String = "TBL_BOMS"
-
-    Const SH_COMPS As String = "Comps"
-    Const LO_COMPS As String = "TBL_COMPS"
-
-    Const BOM_TAB_PREFIX As String = "BOM_BUILD_"
-    Const BOM_ID_PREFIX As String = "BOM-"
-    Const BOM_ID_PAD As Long = 4
-
     Dim wb As Workbook
     Dim wsTemplate As Worksheet
     Dim wsBoms As Worksheet
@@ -81,13 +68,13 @@ Public Sub UI_Create_BOM_For_Assembly()
     If Not GateReady_Safe(True) Then Exit Sub
 
     Set wb = ThisWorkbook
-    Set wsTemplate = wb.Worksheets(SH_TEMPLATE)
+    Set wsTemplate = wb.Worksheets(SH_BOM_TEMPLATE)
     Set wsBoms = wb.Worksheets(SH_BOMS)
     Set wsComps = wb.Worksheets(SH_COMPS)
 
-    Set loTemplate = wsTemplate.ListObjects(LO_TEMPLATE)
-    Set loBoms = wsBoms.ListObjects(LO_BOMS)
-    Set loComps = wsComps.ListObjects(LO_COMPS)
+    Set loTemplate = wsTemplate.ListObjects(TBL_BOM_TEMPLATE)
+    Set loBoms = wsBoms.ListObjects(TBL_BOMS)
+    Set loComps = wsComps.ListObjects(TBL_COMPS)
 
     ' Guard required headers
     RequireColumn loTemplate, "CompID"
@@ -128,11 +115,11 @@ Public Sub UI_Create_BOM_For_Assembly()
     wsTemplate.Copy After:=wb.Sheets(wb.Sheets.Count)
     Set wsNew = ActiveSheet
 
-    newSheetName = BuildUniqueSheetName(wb, BOM_TAB_PREFIX & assemblyId)
+    newSheetName = BuildUniqueSheetName(wb, BOM_SHEET_PREFIX & assemblyId)
     wsNew.Name = newSheetName
 
     Set loNew = wsNew.ListObjects(1)
-    newTableName = BuildUniqueTableName(wb, "TBL_BOM_" & NormalizeName(assemblyId))
+    newTableName = BuildUniqueTableName(wb, BOM_TABLE_PREFIX & NormalizeName(assemblyId))
     loNew.Name = newTableName
 
     ' Register in BOMS table
