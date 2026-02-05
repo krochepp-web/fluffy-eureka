@@ -60,6 +60,8 @@ Public Sub UI_Create_BOM_For_Assembly()
     Dim bomId As String
     Dim newSheetName As String
     Dim newTableName As String
+    Dim assemblyRev As String
+    Dim assemblyRevHeader As String
     Dim createdAt As Date
     Dim createdBy As String
 
@@ -96,6 +98,9 @@ Public Sub UI_Create_BOM_For_Assembly()
 
     RequireColumn loComps, "CompID"
     RequireColumn loComps, "IsBuildable"
+    RequireColumn loComps, "OurRev"
+
+    assemblyRevHeader = ResolveAssemblyRevHeader(loBoms)
 
     assemblyId = Trim$(InputBox("Enter AssemblyID (CompID) for the new buildable BOM.", "New BOM"))
     If Len(assemblyId) = 0 Then Exit Sub
@@ -105,7 +110,24 @@ Public Sub UI_Create_BOM_For_Assembly()
         Exit Sub
     End If
 
+    assemblyRev = Assembly_GetRevision(loComps, assemblyId)
+    If Len(assemblyRev) = 0 Then
+        MsgBox "AssemblyID '" & assemblyId & "' does not have a revision (OurRev) in Comps.", vbExclamation, "New BOM"
+        Exit Sub
+    End If
+
+    If Boms_AssemblyRevExists(loBoms, assemblyId, assemblyRev, assemblyRevHeader) Then
+        MsgBox "A BOM is already registered for AssemblyID '" & assemblyId & "' Rev '" & assemblyRev & "'.", vbExclamation, "New BOM"
+        Exit Sub
+    End If
+
     bomNotes = Trim$(InputBox("Optional BOM notes (blank is ok).", "New BOM (" & assemblyId & ")"))
+
+    newSheetName = BuildUniqueSheetName(wb, BOM_TAB_PREFIX & assemblyId)
+    If Boms_BomTabExists(loBoms, newSheetName) Then
+        MsgBox "BOM tab '" & newSheetName & "' is already registered in BOMS. Resolve the duplicate before creating a new BOM.", vbExclamation, "New BOM"
+        Exit Sub
+    End If
 
     ' Generate BOMID
     bomId = GenerateNextId(loBoms, "BOMID", BOM_ID_PREFIX, BOM_ID_PAD)
@@ -133,6 +155,7 @@ Public Sub UI_Create_BOM_For_Assembly()
     SetByHeader loBoms, lr, "BOMTab", newSheetName
     SetByHeader loBoms, lr, "AssemblyID", assemblyId
     SetByHeader loBoms, lr, "BOM_NOTES", bomNotes
+    SetByHeader loBoms, lr, assemblyRevHeader, assemblyRev
 
     If ColumnExists(loBoms, "CreatedAt") Then SetByHeader loBoms, lr, "CreatedAt", createdAt
     If ColumnExists(loBoms, "CreatedBy") Then SetByHeader loBoms, lr, "CreatedBy", createdBy
@@ -180,6 +203,95 @@ Private Function Assembly_IsBuildable(ByVal loComps As ListObject, ByVal assembl
     For i = 1 To UBound(arrId, 1)
         If StrComp(Trim$(CStr(arrId(i, 1))), assemblyId, vbTextCompare) = 0 Then
             Assembly_IsBuildable = IsTrueish(arrBuild(i, 1))
+            Exit Function
+        End If
+    Next i
+End Function
+
+Private Function Assembly_GetRevision(ByVal loComps As ListObject, ByVal assemblyId As String) As String
+    Dim idxId As Long, idxRev As Long
+    Dim arrId As Variant, arrRev As Variant
+    Dim i As Long
+
+    Assembly_GetRevision = vbNullString
+    If loComps Is Nothing Then Exit Function
+    If loComps.DataBodyRange Is Nothing Then Exit Function
+
+    idxId = GetColIndex(loComps, "CompID")
+    idxRev = GetColIndex(loComps, "OurRev")
+    If idxId = 0 Or idxRev = 0 Then Exit Function
+
+    arrId = loComps.ListColumns(idxId).DataBodyRange.value
+    arrRev = loComps.ListColumns(idxRev).DataBodyRange.value
+
+    For i = 1 To UBound(arrId, 1)
+        If StrComp(Trim$(CStr(arrId(i, 1))), assemblyId, vbTextCompare) = 0 Then
+            Assembly_GetRevision = Trim$(CStr(arrRev(i, 1)))
+            Exit Function
+        End If
+    Next i
+End Function
+
+Private Function ResolveAssemblyRevHeader(ByVal loBoms As ListObject) As String
+    If ColumnExists(loBoms, "AssemblyRev") Then
+        ResolveAssemblyRevHeader = "AssemblyRev"
+        Exit Function
+    End If
+
+    If ColumnExists(loBoms, "Assembly Revision") Then
+        ResolveAssemblyRevHeader = "Assembly Revision"
+        Exit Function
+    End If
+
+    If ColumnExists(loBoms, "OurRev") Then
+        ResolveAssemblyRevHeader = "OurRev"
+        Exit Function
+    End If
+
+    Err.Raise vbObjectError + 6202, "ResolveAssemblyRevHeader", "Missing Assembly Revision column in table '" & loBoms.Name & "'."
+End Function
+
+Private Function Boms_AssemblyRevExists(ByVal loBoms As ListObject, ByVal assemblyId As String, ByVal assemblyRev As String, ByVal assemblyRevHeader As String) As Boolean
+    Dim idxAssembly As Long, idxRev As Long
+    Dim arrAssembly As Variant, arrRev As Variant
+    Dim i As Long
+
+    Boms_AssemblyRevExists = False
+    If loBoms Is Nothing Then Exit Function
+    If loBoms.DataBodyRange Is Nothing Then Exit Function
+
+    idxAssembly = GetColIndex(loBoms, "AssemblyID")
+    idxRev = GetColIndex(loBoms, assemblyRevHeader)
+    If idxAssembly = 0 Or idxRev = 0 Then Exit Function
+
+    arrAssembly = loBoms.ListColumns(idxAssembly).DataBodyRange.value
+    arrRev = loBoms.ListColumns(idxRev).DataBodyRange.value
+
+    For i = 1 To UBound(arrAssembly, 1)
+        If StrComp(Trim$(CStr(arrAssembly(i, 1))), assemblyId, vbTextCompare) = 0 And _
+           StrComp(Trim$(CStr(arrRev(i, 1))), assemblyRev, vbTextCompare) = 0 Then
+            Boms_AssemblyRevExists = True
+            Exit Function
+        End If
+    Next i
+End Function
+
+Private Function Boms_BomTabExists(ByVal loBoms As ListObject, ByVal bomTab As String) As Boolean
+    Dim idxTab As Long
+    Dim arrTab As Variant
+    Dim i As Long
+
+    Boms_BomTabExists = False
+    If loBoms Is Nothing Then Exit Function
+    If loBoms.DataBodyRange Is Nothing Then Exit Function
+
+    idxTab = GetColIndex(loBoms, "BOMTab")
+    If idxTab = 0 Then Exit Function
+
+    arrTab = loBoms.ListColumns(idxTab).DataBodyRange.value
+    For i = 1 To UBound(arrTab, 1)
+        If StrComp(Trim$(CStr(arrTab(i, 1))), bomTab, vbTextCompare) = 0 Then
+            Boms_BomTabExists = True
             Exit Function
         End If
     Next i
