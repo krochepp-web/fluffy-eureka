@@ -160,6 +160,26 @@ Naming & Style Conventions:
 
 \- Buttons/Shapes: BTN\_ (BTN_Generate_PO, BTN_Recalc_Demand).
 
+**BOM Naming Convention (copy/paste for 050 Workbook Strategy)**
+
+```
+BOM Naming Convention (Schema 3.4.3+)
+
+1) BOM worksheet (tab) name:
+   BOM_<AssemblyID>
+
+2) BOM table (ListObject) name:
+   TBL_BOM_<AssemblyID>
+
+3) BOMID (BOMS table):
+   BOM-#### (zero-padded numeric sequence, e.g., BOM-0001)
+
+Notes:
+- <AssemblyID> is the CompID of the buildable top assembly.
+- Illegal Excel sheet characters (/:*?[]\) are normalized, and long names are truncated to 31 chars.
+- The BOM worksheet and table names are derived from AssemblyID; BOMID is a separate ID stored in BOMS.TBL_BOMS.
+```
+
 Workbook Schema (Required Contract):
 
 Examples of required core tables include TBL_SUPPLIERS, TBL_COMPS, TBL_SCHEMA, TBL_AUTOMATION, TBL_HELPERS, TBL_BOM\_\[TA PN\], TBL_BOMS, TBL_WOS, TBL_DEMAND, TBL_PO_LINES, TBL_PO_HEADERS, TBL_INV, TBL_LOG, TBL_USERS. Their detailed structure is defined in the Workbook Strategy (050).
@@ -1118,7 +1138,7 @@ Supplier Name of Supplier
 
 AssemblyID
 
-BomID Unique identifier for each BOM, defined as that which follows BOM\_ on any worksheet tab
+BomID Unique identifier for each BOM, stored in BOMS as BOM-#### (zero-padded numeric sequence)
 
 OurPN Internal Part Number
 
@@ -1183,7 +1203,7 @@ For Reference and filling in some gaps: Overview of Workbook-User Interaction.
 
 Users begin by creating **Supplier** records, followed by **Component** records. Each component references an existing supplier and is uniquely identified by a PN + Revision combination. Components and suppliers may be inactivated to prevent future use while retaining historical data.
 
-Users then define **Top Assemblies (TAs)** by creating Bills of Material (BOMs). Each TA is represented by a worksheet named BOM\_\<TA Name\> created from a template and contains a table listing required components (PN + Revision) and quantities per assembly. A BOM may include multiple instances of the same PN, at the same or different revisions. Once a TA is referenced by a Work Order, the BOM worksheet name becomes fixed, but BOM contents may still be edited.
+Users then define **Top Assemblies (TAs)** by creating Bills of Material (BOMs). Each TA is represented by a worksheet named BOM\_\<AssemblyID\> created from a template and contains a table named TBL_BOM\_\<AssemblyID\> listing required components (PN + Revision) and quantities per assembly. A BOM may include multiple instances of the same PN, at the same or different revisions. Once a TA is referenced by a Work Order, the BOM worksheet name becomes fixed, but BOM contents may still be edited.
 
 Users create **Work Orders (WOs)** by selecting a TA, entering a build quantity and due date. Upon WO creation, and whenever a referenced BOM is edited, the system calculates component demand by PN + Revision based on BOM quantities and WO quantities. Demand is reported both per open WO and as an aggregated total across all open WOs. WOs always reference the current state of a BOM; BOM changes intentionally propagate to existing WOs by updating demand. Allocation priority between WOs is managed manually by the user.
 
