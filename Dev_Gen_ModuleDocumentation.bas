@@ -111,7 +111,7 @@ Private Sub WriteModuleHeaders(ByVal ws As Worksheet)
     ws.Cells(1, 3).value = "CodeLines"
     ws.Cells(1, 4).value = "HasCode"
     ws.Cells(1, 5).value = "Notes"
-    ws.Rows(1).Font.Bold = True
+    ws.rows(1).Font.Bold = True
 End Sub
 
 Private Sub WriteModuleRow(ByVal ws As Worksheet, ByVal r As Long, ByVal vbComp As Object)
@@ -167,7 +167,7 @@ Private Sub WriteProcHeaders(ByVal ws As Worksheet)
     ws.Cells(1, 16).value = "Doc_Author"
     ws.Cells(1, 17).value = "Doc_Date"
     ws.Cells(1, 18).value = "Doc_RawBlock"
-    ws.Rows(1).Font.Bold = True
+    ws.rows(1).Font.Bold = True
 End Sub
 
 Private Sub WriteProceduresForComponent(ByVal ws As Worksheet, ByRef procRow As Long, ByVal vbComp As Object)
@@ -415,7 +415,7 @@ End Sub
 
 Private Sub AutofitAll(ByVal ws As Worksheet)
     ws.Columns.AutoFit
-    ws.Rows(1).WrapText = False
+    ws.rows(1).WrapText = False
 End Sub
 
 

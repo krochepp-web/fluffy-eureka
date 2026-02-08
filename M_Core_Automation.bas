@@ -279,7 +279,7 @@ Private Function FlagStaleRows( _
         Exit Function
     End If
 
-    For i = 1 To lo.DataBodyRange.Rows.Count
+    For i = 1 To lo.DataBodyRange.rows.Count
         procName = Trim$(CStr(lo.DataBodyRange.Cells(i, colEntry).value))
         If Len(procName) > 0 Then
             If Not dicFound.Exists(procName) Then
@@ -306,7 +306,7 @@ Private Sub BuildExistingIndex(ByVal lo As ListObject, ByVal colEntry As Long, B
 
     If lo.DataBodyRange Is Nothing Then Exit Sub
 
-    For i = 1 To lo.DataBodyRange.Rows.Count
+    For i = 1 To lo.DataBodyRange.rows.Count
         key = Trim$(CStr(lo.DataBodyRange.Cells(i, colEntry).value))
         If Len(key) > 0 Then
             If Not dicExisting.Exists(key) Then dicExisting.Add key, i

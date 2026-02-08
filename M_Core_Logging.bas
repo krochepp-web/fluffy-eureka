@@ -260,9 +260,9 @@ Private Sub SortLogTableByTimestamp(ByVal lo As ListObject)
     
     With lo.Sort
         .SortFields.Clear
-        .SortFields.Add Key:=tsColumn.Range, _
+        .SortFields.Add key:=tsColumn.Range, _
             SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
-        .Header = xlYes
+        .header = xlYes
         .MatchCase = False
         .Apply
     End With

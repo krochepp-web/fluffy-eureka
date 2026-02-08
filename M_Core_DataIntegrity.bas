@@ -340,7 +340,7 @@ End Function
 
 Private Function RowIsCompletelyBlank(ByVal lo As ListObject, ByVal rowIndex As Long) As Boolean
     Dim rngRow As Range, c As Range
-    Set rngRow = lo.DataBodyRange.Rows(rowIndex)
+    Set rngRow = lo.DataBodyRange.rows(rowIndex)
 
     For Each c In rngRow.Cells
         If Not IsBlankish(c.value) Then
@@ -372,7 +372,7 @@ Private Function CheckUniqueSingle(ByVal lo As ListObject, ByVal uniqueCols As C
             Set rngCol = lo.ListColumns(colH).DataBodyRange
 
             Dim r As Long
-            For r = 1 To rngCol.Rows.Count
+            For r = 1 To rngCol.rows.Count
                 Dim key As String
                 key = Trim$(CStr(NzText(rngCol.Cells(r, 1).value)))
                 If Len(key) > 0 Then

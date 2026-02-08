@@ -147,7 +147,7 @@ Private Function CountIssueRows(ByVal wb As Workbook, ByVal sheetName As String)
     End If
 
     Set ws = wb.Worksheets(sheetName)
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).row
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).row
 
     If lastRow < 2 Then
         CountIssueRows = 0

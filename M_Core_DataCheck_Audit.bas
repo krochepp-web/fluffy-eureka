@@ -37,7 +37,7 @@ Public Sub Audit_DataCheck_Summary()
     End If
     Set wsSrc = wb.Worksheets(SRC_SHEET)
 
-    lastRow = wsSrc.Cells(wsSrc.Rows.Count, 1).End(xlUp).row
+    lastRow = wsSrc.Cells(wsSrc.rows.Count, 1).End(xlUp).row
     Set wsOut = EnsureWorksheet(wb, OUT_SHEET)
     wsOut.Cells.ClearContents
     wsOut.Range("A1:D1").value = Array("Category", "TabName", "TableName", "Count")

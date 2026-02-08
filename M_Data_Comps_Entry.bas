@@ -377,10 +377,10 @@ End Function
 '==========================
 ' REQUIRED TEXT PROMPT
 '==========================
-Private Function Prompt_RequiredText(ByVal prompt As String, ByVal TITLE As String, ByVal defaultValue As String) As String
+Private Function Prompt_RequiredText(ByVal prompt As String, ByVal title As String, ByVal defaultValue As String) As String
     Dim resp As String
 Retry:
-    resp = InputBox(prompt & vbCrLf & "(Leave blank and click Cancel to abort.)", TITLE, defaultValue)
+    resp = InputBox(prompt & vbCrLf & "(Leave blank and click Cancel to abort.)", title, defaultValue)
     resp = Trim$(resp)
 
     If Len(resp) = 0 Then
@@ -388,7 +388,7 @@ Retry:
         ans = MsgBox("This field is required." & vbCrLf & vbCrLf & _
                      "Yes = Try again" & vbCrLf & _
                      "No  = Cancel creation (rollback)", _
-                     vbYesNo + vbExclamation, TITLE)
+                     vbYesNo + vbExclamation, title)
         If ans = vbYes Then GoTo Retry
         Prompt_RequiredText = vbNullString
         Exit Function
@@ -400,7 +400,7 @@ End Function
 '==========================
 ' LIST PROMPTS (Named Range)
 '==========================
-Private Function Prompt_ListValue(ByVal namedRange As String, ByVal prompt As String, ByVal TITLE As String, ByVal defaultValue As String) As String
+Private Function Prompt_ListValue(ByVal namedRange As String, ByVal prompt As String, ByVal title As String, ByVal defaultValue As String) As String
     Dim arr As Variant
     Dim choices() As String
     Dim i As Long, n As Long
@@ -414,7 +414,7 @@ Private Function Prompt_ListValue(ByVal namedRange As String, ByVal prompt As St
     n = UBound(arr, 1)
 
     If n <= 0 Then
-        MsgBox "Named range '" & namedRange & "' has no values.", vbExclamation, TITLE
+        MsgBox "Named range '" & namedRange & "' has no values.", vbExclamation, title
         Exit Function
     End If
 
@@ -438,7 +438,7 @@ Retry:
         End If
     Next i
 
-    resp = InputBox(menu, TITLE, defaultValue)
+    resp = InputBox(menu, title, defaultValue)
     resp = Trim$(resp)
 
     If Len(resp) = 0 Then
@@ -458,7 +458,7 @@ Retry:
                 Exit Function
             End If
         End If
-        MsgBox "Invalid selection number. Try again.", vbExclamation, TITLE
+        MsgBox "Invalid selection number. Try again.", vbExclamation, title
         GoTo Retry
     End If
 
@@ -469,16 +469,16 @@ Retry:
         End If
     Next i
 
-    MsgBox "Value not found in '" & namedRange & "'. Please select from the list.", vbExclamation, TITLE
+    MsgBox "Value not found in '" & namedRange & "'. Please select from the list.", vbExclamation, title
     GoTo Retry
 End Function
 
-Private Function Prompt_Long(ByVal prompt As String, ByVal TITLE As String, ByVal defaultValue As Long, ByVal minValue As Long, ByVal maxValue As Long) As Long
+Private Function Prompt_Long(ByVal prompt As String, ByVal title As String, ByVal defaultValue As Long, ByVal minValue As Long, ByVal maxValue As Long) As Long
     Dim resp As String
     Dim v As Double
 
 Retry:
-    resp = Trim$(InputBox(prompt & vbCrLf & "(Min=" & CStr(minValue) & ", Max=" & CStr(maxValue) & ")", TITLE, CStr(defaultValue)))
+    resp = Trim$(InputBox(prompt & vbCrLf & "(Min=" & CStr(minValue) & ", Max=" & CStr(maxValue) & ")", title, CStr(defaultValue)))
 
     If Len(resp) = 0 Then
         Prompt_Long = defaultValue
@@ -486,30 +486,30 @@ Retry:
     End If
 
     If Not IsNumeric(resp) Then
-        MsgBox "Please enter a whole number.", vbExclamation, TITLE
+        MsgBox "Please enter a whole number.", vbExclamation, title
         GoTo Retry
     End If
 
     v = CDbl(resp)
     If v <> Fix(v) Then
-        MsgBox "Please enter a whole number (no decimals).", vbExclamation, TITLE
+        MsgBox "Please enter a whole number (no decimals).", vbExclamation, title
         GoTo Retry
     End If
 
     If v < minValue Or v > maxValue Then
-        MsgBox "Value out of range. Must be between " & CStr(minValue) & " and " & CStr(maxValue) & ".", vbExclamation, TITLE
+        MsgBox "Value out of range. Must be between " & CStr(minValue) & " and " & CStr(maxValue) & ".", vbExclamation, title
         GoTo Retry
     End If
 
     Prompt_Long = CLng(v)
 End Function
 
-Private Function Prompt_Double(ByVal prompt As String, ByVal TITLE As String, ByVal defaultValue As Double, ByVal minValue As Double, ByVal maxValue As Double) As Double
+Private Function Prompt_Double(ByVal prompt As String, ByVal title As String, ByVal defaultValue As Double, ByVal minValue As Double, ByVal maxValue As Double) As Double
     Dim resp As String
     Dim v As Double
 
 Retry:
-    resp = Trim$(InputBox(prompt & vbCrLf & "(Min=" & CStr(minValue) & ", Max=" & CStr(maxValue) & ")", TITLE, CStr(defaultValue)))
+    resp = Trim$(InputBox(prompt & vbCrLf & "(Min=" & CStr(minValue) & ", Max=" & CStr(maxValue) & ")", title, CStr(defaultValue)))
 
     If Len(resp) = 0 Then
         Prompt_Double = defaultValue
@@ -517,13 +517,13 @@ Retry:
     End If
 
     If Not IsNumeric(resp) Then
-        MsgBox "Please enter a number.", vbExclamation, TITLE
+        MsgBox "Please enter a number.", vbExclamation, title
         GoTo Retry
     End If
 
     v = CDbl(resp)
     If v < minValue Or v > maxValue Then
-        MsgBox "Value out of range. Must be between " & CStr(minValue) & " and " & CStr(maxValue) & ".", vbExclamation, TITLE
+        MsgBox "Value out of range. Must be between " & CStr(minValue) & " and " & CStr(maxValue) & ".", vbExclamation, title
         GoTo Retry
     End If
 
@@ -587,7 +587,7 @@ End Function
 ' SUPPLIER PICKER (IMPROVED)
 '==========================
 Private Function SupplierPick_ByName(ByVal loSupp As ListObject, ByRef supplierId As String, ByRef supplierName As String, ByRef supplierDefaultLT As Variant) As Boolean
-    Const TITLE As String = "Pick Supplier"
+    Const title As String = "Pick Supplier"
     Const MAX_SHOW As Long = 25
     Const SAMPLE_SHOW As Long = 12
 
@@ -608,12 +608,12 @@ Private Function SupplierPick_ByName(ByVal loSupp As ListObject, ByRef supplierI
     supplierDefaultLT = vbNullString
 
     If loSupp Is Nothing Then
-        MsgBox "Suppliers table reference is Nothing.", vbExclamation, TITLE
+        MsgBox "Suppliers table reference is Nothing.", vbExclamation, title
         Exit Function
     End If
 
     If loSupp.DataBodyRange Is Nothing Then
-        MsgBox "Suppliers table '" & loSupp.Name & "' has no rows.", vbExclamation, TITLE
+        MsgBox "Suppliers table '" & loSupp.Name & "' has no rows.", vbExclamation, title
         Exit Function
     End If
 
@@ -623,7 +623,7 @@ Private Function SupplierPick_ByName(ByVal loSupp As ListObject, ByRef supplierI
 
     If idxId = 0 Or idxName = 0 Or idxLT = 0 Then
         MsgBox "Supplier picker cannot run because required headers were not found." & vbCrLf & _
-               "Expected: SupplierID, SupplierName, SupplierDefaultLT", vbExclamation, TITLE
+               "Expected: SupplierID, SupplierName, SupplierDefaultLT", vbExclamation, title
         Exit Function
     End If
 
@@ -636,7 +636,7 @@ RetrySearch:
         "Supplier search:" & vbCrLf & _
         "- Type part of the supplier name (e.g., dig, digi key, b&b, thread)." & vbCrLf & _
         "- Leave blank and click OK to cancel.", _
-        TITLE)
+        title)
 
     term = Trim$(term)
     If Len(term) = 0 Then Exit Function
@@ -674,7 +674,7 @@ RetrySearch:
             msg = msg & "  - " & CStr(arrName(i, 1)) & vbCrLf
         Next i
 
-        MsgBox msg, vbExclamation, TITLE
+        MsgBox msg, vbExclamation, title
         GoTo RetrySearch
     End If
 
@@ -685,7 +685,7 @@ RetrySearch:
                      CStr(arrName(i, 1)) & "  [" & CStr(arrId(i, 1)) & "]" & vbCrLf & vbCrLf & _
                      "Yes = Use this supplier" & vbCrLf & _
                      "No  = Re-search", _
-                     vbYesNo + vbQuestion, TITLE)
+                     vbYesNo + vbQuestion, title)
         If ans = vbNo Then GoTo RetrySearch
 
         supplierId = CStr(arrId(i, 1))
@@ -706,19 +706,19 @@ RetryPick:
         End If
     Next i
 
-    choiceText = InputBox(menu & vbCrLf & "Enter a number (or leave blank to re-search).", TITLE)
+    choiceText = InputBox(menu & vbCrLf & "Enter a number (or leave blank to re-search).", title)
     choiceText = Trim$(choiceText)
 
     If Len(choiceText) = 0 Then GoTo RetrySearch
 
     If Not IsNumeric(choiceText) Then
-        MsgBox "Please enter a valid number from the list.", vbExclamation, TITLE
+        MsgBox "Please enter a valid number from the list.", vbExclamation, title
         GoTo RetryPick
     End If
 
     choiceN = CLng(choiceText)
     If choiceN < 1 Or choiceN > hitCount Then
-        MsgBox "Choice out of range. Pick a number shown in the list.", vbExclamation, TITLE
+        MsgBox "Choice out of range. Pick a number shown in the list.", vbExclamation, title
         GoTo RetryPick
     End If
 
@@ -874,22 +874,22 @@ Private Function TrailingNumber(ByVal s As String) As Long
 End Function
 
 Private Function PNRevComboExists(ByVal lo As ListObject, ByVal ourPN As String, ByVal ourRev As String) As Boolean
-    Dim idxPN As Long, idxRev As Long
-    Dim arrPN As Variant, arrRev As Variant
+    Dim idxPn As Long, idxRev As Long
+    Dim arrPn As Variant, arrRev As Variant
     Dim i As Long
 
     PNRevComboExists = False
     If lo.DataBodyRange Is Nothing Then Exit Function
 
-    idxPN = GetColIndex(lo, "OurPN")
+    idxPn = GetColIndex(lo, "OurPN")
     idxRev = GetColIndex(lo, "OurRev")
-    If idxPN = 0 Or idxRev = 0 Then Exit Function
+    If idxPn = 0 Or idxRev = 0 Then Exit Function
 
-    arrPN = lo.ListColumns(idxPN).DataBodyRange.value
+    arrPn = lo.ListColumns(idxPn).DataBodyRange.value
     arrRev = lo.ListColumns(idxRev).DataBodyRange.value
 
-    For i = 1 To UBound(arrPN, 1)
-        If StrComp(Trim$(CStr(arrPN(i, 1))), Trim$(ourPN), vbTextCompare) = 0 _
+    For i = 1 To UBound(arrPn, 1)
+        If StrComp(Trim$(CStr(arrPn(i, 1))), Trim$(ourPN), vbTextCompare) = 0 _
            And StrComp(Trim$(CStr(arrRev(i, 1))), Trim$(ourRev), vbTextCompare) = 0 Then
             PNRevComboExists = True
             Exit Function

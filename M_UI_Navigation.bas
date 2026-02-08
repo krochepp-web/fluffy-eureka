@@ -13,6 +13,21 @@ Attribute VB_Name = "M_UI_Navigation"
 '11.
 '12.
 
+
+Sub UI_GoToBOMS()
+    ' Replace "YourSheetName" with the actual name of the worksheet tab
+    ' For example: Worksheets("Data").Activate
+    Worksheets("BOMS").Activate
+    
+    ' Reset the view so that cell A1 is in the upper-left corner
+    ActiveWindow.ScrollRow = 1
+    ActiveWindow.ScrollColumn = 1
+    
+    ' Optional: Select cell A1 (uncomment if needed)
+    ' Range("A1").Select
+End Sub
+
+
 Sub UI_GoToLOG()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
@@ -113,7 +128,7 @@ Sub UI_GoToSheetCore_Tests()
     ' Reset the view so that cell A1 is in the upper-left corner
     ActiveWindow.ScrollRow = 1
     ActiveWindow.ScrollColumn = 1
-    
+                                                                                                                                                                
     ' Optional: Select cell A1 (uncomment if needed)
     ' Range("A1").Select
 End Sub

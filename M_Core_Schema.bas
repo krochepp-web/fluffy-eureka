@@ -42,6 +42,36 @@ EH:
     End If
     Resume CleanExit
 End Sub
+'===============================================================================
+' Purpose:
+'   Determines which tabs should be excluded from schema "extra table" scanning.
+'
+' Notes:
+'   Schema validation in this workbook is table-centric (ListObjects). This skip
+'   list prevents user-generated sheets (e.g., BOM_<TAID>) from forcing schema
+'   maintenance for each new top assembly.
+'===============================================================================
+Private Function ShouldSkipSchemaTab(ByVal tabName As String) As Boolean
+    Dim t As String
+    t = UCase$(Trim$(tabName))
+
+    ' Existing explicit skip
+    If t = "SCRIPTSPLAN" Then
+        ShouldSkipSchemaTab = True
+        Exit Function
+    End If
+
+    ' User-generated BOM sheets: BOM_<TAID>
+    If Left$(t, 4) = "BOM_" Then
+        ShouldSkipSchemaTab = True
+        Exit Function
+    End If
+
+    ' Add other skip patterns here if needed
+    'If Left$(t, 4) = "TMP_" Then ShouldSkipSchemaTab = True: Exit Function
+
+    ShouldSkipSchemaTab = False
+End Function
 
 Public Sub Schema_Validate_All(Optional ByVal showUserMessage As Boolean = True)
     Const PROC_NAME As String = "Schema_Validate_All"
@@ -113,6 +143,7 @@ End Sub
 '-------------------------
 
 Private Function ValidateTablesExist(ByVal wb As Workbook, ByVal rules As Object, ByVal wsOut As Worksheet, ByRef outRow As Long) As Long
+    Dim tableKey As String
     Dim ws As Worksheet
     Dim tabName As String, tableName As String
     Dim tKey As Variant
@@ -121,24 +152,24 @@ Private Function ValidateTablesExist(ByVal wb As Workbook, ByVal rules As Object
     countIssues = 0
 
     ' 1) Extra tables: exist in workbook but not in schema rules
-    For Each ws In wb.Worksheets
-        If StrComp(ws.Name, "SCRIPTSPlan", vbTextCompare) <> 0 Then
-            Dim lo As ListObject
-            For Each lo In ws.ListObjects
-                tabName = ws.Name
-                tableName = lo.Name
+   For Each ws In wb.Worksheets
+    If Not ShouldSkipSchemaTab(ws.Name) Then
+        Dim lo As ListObject
+        For Each lo In ws.ListObjects
+            tabName = ws.Name
+            tableName = lo.Name
 
-                Dim tableKey As String
-                tableKey = MakeTableKey(tabName, tableName)
+            tableKey = MakeTableKey(tabName, tableName)
 
-                If Not rules.Exists(tableKey) Then
-                    WriteIssue wsOut, outRow, "ExtraTable", tabName, tableName, vbNullString, _
-                               "Table exists in workbook but is not defined in TBL_SCHEMA."
-                    countIssues = countIssues + 1
-                End If
-            Next lo
-        End If
-    Next ws
+            If Not rules.Exists(tableKey) Then
+                WriteIssue wsOut, outRow, "ExtraTable", tabName, tableName, vbNullString, _
+                           "Table exists in workbook but is not defined in TBL_SCHEMA."
+                countIssues = countIssues + 1
+            End If
+        Next lo
+    End If
+Next ws
+
 
     ' 2) Missing tables: exist in rules but not in workbook
     For Each tKey In rules.Keys
@@ -284,7 +315,7 @@ Private Function BuildSchemaRules(ByVal loSchema As ListObject, ByVal schemaCols
         Exit Function
     End If
 
-    For r = 1 To loSchema.DataBodyRange.Rows.Count
+    For r = 1 To loSchema.DataBodyRange.rows.Count
         tabName = Trim$(CStr(loSchema.DataBodyRange.Cells(r, idxTab).value))
         tableName = Trim$(CStr(loSchema.DataBodyRange.Cells(r, idxTable).value))
         colHeader = Trim$(CStr(loSchema.DataBodyRange.Cells(r, idxCol).value))

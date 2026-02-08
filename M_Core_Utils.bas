@@ -60,7 +60,7 @@ Option Explicit
 
 Public Function ConfirmProceed( _
     ByVal prompt As String, _
-    Optional ByVal TITLE As String = "Confirm Action", _
+    Optional ByVal title As String = "Confirm Action", _
     Optional ByVal defaultNo As Boolean = True) As Boolean
     '-------------------------------------------------------------------------
     ' Purpose:
@@ -85,7 +85,7 @@ Public Function ConfirmProceed( _
         defaultButton = vbDefaultButton1
     End If
     
-    answer = MsgBox(prompt, buttons + defaultButton, TITLE)
+    answer = MsgBox(prompt, buttons + defaultButton, title)
     ConfirmProceed = (answer = vbYes)
     
 CleanExit:
@@ -281,7 +281,7 @@ Public Function SafeGetValue( _
     
     If lo Is Nothing Then GoTo CleanExit
     If lo.DataBodyRange Is Nothing Then GoTo CleanExit
-    If rowIndex < 1 Or rowIndex > lo.DataBodyRange.Rows.Count Then GoTo CleanExit
+    If rowIndex < 1 Or rowIndex > lo.DataBodyRange.rows.Count Then GoTo CleanExit
     
     colIndex = GetColumnIndexByName(lo, columnName)
     If colIndex = 0 Then GoTo CleanExit
@@ -319,7 +319,7 @@ Public Sub SafeSetValue( _
     
     If lo Is Nothing Then GoTo CleanExit
     If lo.DataBodyRange Is Nothing Then GoTo CleanExit
-    If rowIndex < 1 Or rowIndex > lo.DataBodyRange.Rows.Count Then GoTo CleanExit
+    If rowIndex < 1 Or rowIndex > lo.DataBodyRange.rows.Count Then GoTo CleanExit
     
     colIndex = GetColumnIndexByName(lo, columnName)
     If colIndex = 0 Then GoTo CleanExit
@@ -403,7 +403,7 @@ Public Sub ArrayToListObject( _
     If clearExisting Then
         ' Delete all existing rows
         If Not lo.DataBodyRange Is Nothing Then
-            currentRows = lo.DataBodyRange.Rows.Count
+            currentRows = lo.DataBodyRange.rows.Count
             For i = currentRows To 1 Step -1
                 lo.ListRows(i).Delete
             Next i

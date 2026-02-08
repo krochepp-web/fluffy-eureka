@@ -137,7 +137,7 @@ Private Function CountIssuesOnSheet(ByVal sheetName As String) As Long
     On Error GoTo CleanFail
     Set ws = ThisWorkbook.Worksheets(sheetName)
 
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).row
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).row
     If lastRow < 2 Then
         CountIssuesOnSheet = 0
     Else

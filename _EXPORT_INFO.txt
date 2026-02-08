@@ -1,0 +1,12 @@
+CUSTOM Tracker – VBA Export
+-------------------------------------------------------
+WorkbookName: 100 - CUSTOM TRACKER 3.4.5x.xlsm
+WorkbookPath: https://d.docs.live.net/8ab37a4b2e1649c0/Custom Tracker/100 - CUSTOM TRACKER 3.4.5x.xlsm
+ExportFolder: C:\Users\kroch\OneDrive\010 - Documents\GitHub\fluffy-eureka
+ExportedAt: 2026-02-08 08:46:14
+User: kroch
+ExcelVersion: 16.0
+OK: 30
+Failed: 0
+HadErr52: NO
+Import: Run Import_All_BAS_Modules_FromFolder to import .bas modules from this folder.

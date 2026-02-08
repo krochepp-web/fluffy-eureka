@@ -81,7 +81,7 @@ Public Sub Export_Tables_Headers_LongCSV_Universal()
     fPath = Application.GetSaveAsFilename( _
                 InitialFileName:="Workbook_Schema_Long.csv", _
                 FileFilter:="CSV Files (*.csv), *.csv", _
-                TITLE:="Save workbook schema CSV")
+                title:="Save workbook schema CSV")
 
     If VarType(fPath) = vbBoolean And fPath = False Then Exit Sub
 

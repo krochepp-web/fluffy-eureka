@@ -312,15 +312,15 @@ Private Sub AppendTempPNRevRow(ByVal loComps As ListObject, ByVal pn As String, 
 End Sub
 
 Private Sub DeleteRowsByPNRev(ByVal loComps As ListObject, ByVal pn As String, ByVal rev As String)
-    Dim idxPN As Long, idxRev As Long
+    Dim idxPn As Long, idxRev As Long
     Dim i As Long
 
-    idxPN = GetColIndex(loComps, "OurPN")
+    idxPn = GetColIndex(loComps, "OurPN")
     idxRev = GetColIndex(loComps, "OurRev")
-    If idxPN = 0 Or idxRev = 0 Then Exit Sub
+    If idxPn = 0 Or idxRev = 0 Then Exit Sub
 
     For i = loComps.ListRows.Count To 1 Step -1
-        If StrComp(Trim$(CStr(loComps.ListRows(i).Range.Cells(1, idxPN).value)), Trim$(pn), vbTextCompare) = 0 _
+        If StrComp(Trim$(CStr(loComps.ListRows(i).Range.Cells(1, idxPn).value)), Trim$(pn), vbTextCompare) = 0 _
            And StrComp(Trim$(CStr(loComps.ListRows(i).Range.Cells(1, idxRev).value)), Trim$(rev), vbTextCompare) = 0 Then
             loComps.ListRows(i).Delete
         End If
@@ -364,22 +364,22 @@ End Sub
 '===============================================================================
 
 Private Function PNRevComboExists(ByVal lo As ListObject, ByVal ourPN As String, ByVal ourRev As String) As Boolean
-    Dim idxPN As Long, idxRev As Long
-    Dim arrPN As Variant, arrRev As Variant
+    Dim idxPn As Long, idxRev As Long
+    Dim arrPn As Variant, arrRev As Variant
     Dim i As Long
 
     PNRevComboExists = False
     If lo.DataBodyRange Is Nothing Then Exit Function
 
-    idxPN = GetColIndex(lo, "OurPN")
+    idxPn = GetColIndex(lo, "OurPN")
     idxRev = GetColIndex(lo, "OurRev")
-    If idxPN = 0 Or idxRev = 0 Then Exit Function
+    If idxPn = 0 Or idxRev = 0 Then Exit Function
 
-    arrPN = lo.ListColumns(idxPN).DataBodyRange.value
+    arrPn = lo.ListColumns(idxPn).DataBodyRange.value
     arrRev = lo.ListColumns(idxRev).DataBodyRange.value
 
-    For i = 1 To UBound(arrPN, 1)
-        If StrComp(Trim$(CStr(arrPN(i, 1))), Trim$(ourPN), vbTextCompare) = 0 _
+    For i = 1 To UBound(arrPn, 1)
+        If StrComp(Trim$(CStr(arrPn(i, 1))), Trim$(ourPN), vbTextCompare) = 0 _
            And StrComp(Trim$(CStr(arrRev(i, 1))), Trim$(ourRev), vbTextCompare) = 0 Then
             PNRevComboExists = True
             Exit Function
