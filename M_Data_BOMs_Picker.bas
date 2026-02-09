@@ -142,6 +142,40 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
 End Sub
 
+Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVal qtyPer As Double)
+    Const PROC_NAME As String = "M_Data_BOMs_Picker.AddComponentToActiveBOM"
+
+    Dim wb As Workbook
+    Dim loBom As ListObject
+    Dim wsComps As Worksheet
+    Dim loComps As ListObject
+
+    Dim compId As String, desc As String, uom As String, notes As String
+
+    On Error GoTo EH
+
+    If qtyPer <= 0 Then
+        MsgBox "QtyPer must be > 0.", vbExclamation, "Component Picker"
+        Exit Sub
+    End If
+
+    Set wb = ThisWorkbook
+    Set loBom = GetActiveBOMTable(wb)
+    Set wsComps = wb.Worksheets(SH_COMPS)
+    Set loComps = wsComps.ListObjects(LO_COMPS)
+
+    If Not Comps_LookupActive(loComps, pn, rev, ACTIVE_LABEL, compId, desc, uom, notes) Then
+        Exit Sub
+    End If
+
+    Bom_UpsertComponent loBom, compId, pn, rev, desc, uom, qtyPer, notes
+    Exit Sub
+
+EH:
+    MsgBox "Add component failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+End Sub
+
 '==========================
 ' Core logic
 '==========================
@@ -294,7 +328,7 @@ Public Function Picker_GetResults( _
     idxRS = GetColIndex(loComps, "RevStatus")
 
     If idxCompID = 0 Or idxPn = 0 Or idxRev = 0 Or idxDesc = 0 Or idxUom = 0 Or idxNotes = 0 Or idxRS = 0 Then
-        Err.Raise vbObjectError + 8100, PROC_NAME, "Comps.TBL_COMPS missing one or more required headers."
+        Err.Raise vbObjectError + 8101, PROC_NAME, "Comps.TBL_COMPS missing one or more required headers."
     End If
 
     outCount = 0
@@ -626,6 +660,81 @@ Private Function GetColIndex(ByVal lo As ListObject, ByVal header As String) As 
         End If
     Next lc
     GetColIndex = 0
+End Function
+
+Private Function GetActiveBOMTable(ByVal wb As Workbook) As ListObject
+    Const PROC_NAME As String = "M_Data_BOMs_Picker.GetActiveBOMTable"
+    Dim wsBom As Worksheet
+
+    Set wsBom = ActiveSheet
+    If wsBom Is Nothing Then Err.Raise vbObjectError + 8600, PROC_NAME, "No active sheet."
+    If wsBom.ListObjects.Count < 1 Then Err.Raise vbObjectError + 8601, PROC_NAME, "Active sheet has no BOM table (ListObject)."
+    Set GetActiveBOMTable = wsBom.ListObjects(1)
+
+    RequireColumn GetActiveBOMTable, "CompID"
+    RequireColumn GetActiveBOMTable, "OurPN"
+    RequireColumn GetActiveBOMTable, "OurRev"
+    RequireColumn GetActiveBOMTable, "Description"
+    RequireColumn GetActiveBOMTable, "UOM"
+    RequireColumn GetActiveBOMTable, "QtyPer"
+    RequireColumn GetActiveBOMTable, "CompNotes"
+End Function
+
+Private Function Comps_LookupActive(ByVal loComps As ListObject, ByVal pn As String, ByVal rev As String, ByVal activeLabel As String, _
+                                   ByRef compIdOut As String, ByRef descOut As String, ByRef uomOut As String, ByRef notesOut As String) As Boolean
+    Dim idxId As Long, idxPn As Long, idxRev As Long, idxDesc As Long, idxUom As Long, idxNotes As Long, idxRS As Long
+    Dim arrPn As Variant, arrRev As Variant, arrId As Variant, arrDesc As Variant, arrUom As Variant, arrNotes As Variant, arrRS As Variant
+    Dim i As Long
+
+    Comps_LookupActive = False
+    compIdOut = vbNullString
+    descOut = vbNullString
+    uomOut = vbNullString
+    notesOut = vbNullString
+
+    If loComps Is Nothing Then Exit Function
+    If loComps.DataBodyRange Is Nothing Then
+        MsgBox "Comps table has no data.", vbExclamation, "Component Picker"
+        Exit Function
+    End If
+
+    idxId = GetColIndex(loComps, "CompID")
+    idxPn = GetColIndex(loComps, "OurPN")
+    idxRev = GetColIndex(loComps, "OurRev")
+    idxDesc = GetColIndex(loComps, "ComponentDescription")
+    idxUom = GetColIndex(loComps, "UOM")
+    idxNotes = GetColIndex(loComps, "ComponentNotes")
+    idxRS = GetColIndex(loComps, "RevStatus")
+
+    If idxId = 0 Or idxPn = 0 Or idxRev = 0 Or idxDesc = 0 Or idxUom = 0 Or idxNotes = 0 Or idxRS = 0 Then Exit Function
+
+    arrId = loComps.ListColumns(idxId).DataBodyRange.value
+    arrPn = loComps.ListColumns(idxPn).DataBodyRange.value
+    arrRev = loComps.ListColumns(idxRev).DataBodyRange.value
+    arrDesc = loComps.ListColumns(idxDesc).DataBodyRange.value
+    arrUom = loComps.ListColumns(idxUom).DataBodyRange.value
+    arrNotes = loComps.ListColumns(idxNotes).DataBodyRange.value
+    arrRS = loComps.ListColumns(idxRS).DataBodyRange.value
+
+    For i = 1 To UBound(arrPn, 1)
+        If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
+           StrComp(SafeText(arrRev(i, 1)), rev, vbTextCompare) = 0 Then
+
+            If StrComp(SafeText(arrRS(i, 1)), activeLabel, vbTextCompare) <> 0 Then
+                MsgBox "Component is not active: " & pn & " / " & rev, vbExclamation, "Component Picker"
+                Exit Function
+            End If
+
+            compIdOut = SafeText(arrId(i, 1))
+            descOut = SafeText(arrDesc(i, 1))
+            uomOut = SafeText(arrUom(i, 1))
+            notesOut = SafeText(arrNotes(i, 1))
+            Comps_LookupActive = True
+            Exit Function
+        End If
+    Next i
+
+    MsgBox "Component not found in Comps: " & pn & " / " & rev, vbExclamation, "Component Picker"
 End Function
 
 Private Sub SetByHeader(ByVal lo As ListObject, ByVal lr As ListRow, ByVal header As String, ByVal v As Variant)

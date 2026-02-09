@@ -29,7 +29,11 @@ Option Explicit
 ' Date: 2026-02-07
 '===============================================================================
 
-Public Sub UI_Create_BOM_For_Assembly()
+Public Sub UI_Create_BOM_For_Assembly( _
+    Optional ByVal taIdIn As String = "", _
+    Optional ByVal taPnIn As String = "", _
+    Optional ByVal taRevIn As String = "", _
+    Optional ByVal taDescIn As String = "")
     Const PROC_NAME As String = "M_Data_BOMs_Entry.UI_Create_BOM_For_Assembly"
 
     On Error GoTo EH
@@ -211,6 +215,42 @@ EH:
         "BomsSheet=" & SH_BOMS & vbCrLf & _
         "ActiveSheet=" & SafeSheetNameSafe() & vbCrLf & _
         "Workbook=" & ThisWorkbook.Name
+    Resume CleanExit
+End Sub
+
+Public Sub UI_Create_BOM_For_Assembly_Form()
+    Const PROC_NAME As String = "M_Data_BOMs_Entry.UI_Create_BOM_For_Assembly_Form"
+
+    Dim frm As UF_BOM_Create
+    Dim taId As String
+    Dim taPn As String
+    Dim taRev As String
+    Dim taDesc As String
+
+    On Error GoTo EH
+
+    If Not GateReady_Safe(True) Then Exit Sub
+
+    Set frm = New UF_BOM_Create
+    frm.Show vbModal
+
+    If frm.Cancelled Then GoTo CleanExit
+
+    taId = frm.TAID
+    taPn = frm.TAPN
+    taRev = frm.TARev
+    taDesc = frm.TADesc
+
+    UI_Create_BOM_For_Assembly taId, taPn, taRev, taDesc
+
+CleanExit:
+    On Error Resume Next
+    Unload frm
+    Exit Sub
+
+EH:
+    MsgBox "Form-based BOM creation failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
     Resume CleanExit
 End Sub
 
