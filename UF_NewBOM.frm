@@ -91,20 +91,20 @@ Private mWb As Workbook
 
 Public Sub InitForm(ByVal wb As Workbook)
     Set mWb = wb
-    txtTAID.Value = vbNullString
-    txtTAPN.Value = vbNullString
-    txtTARev.Value = vbNullString
-    txtTADesc.Value = vbNullString
+    SetControlValue "txtTAID", vbNullString
+    SetControlValue "txtTAPN", vbNullString
+    SetControlValue "txtTARev", vbNullString
+    SetControlValue "txtTADesc", vbNullString
 End Sub
 
 Private Sub cmdCreate_Click()
     On Error GoTo EH
 
     M_Data_BOMs_Entry.Create_BOM_For_Assembly_FromInputs _
-        Trim$(txtTAID.Value), _
-        Trim$(txtTAPN.Value), _
-        Trim$(txtTARev.Value), _
-        Trim$(txtTADesc.Value)
+        GetControlValue("txtTAID"), _
+        GetControlValue("txtTAPN"), _
+        GetControlValue("txtTARev"), _
+        GetControlValue("txtTADesc")
 
     Unload Me
     Exit Sub
@@ -117,3 +117,30 @@ End Sub
 Private Sub cmdCancel_Click()
     Unload Me
 End Sub
+
+Private Function GetControlValue(ByVal controlName As String) As String
+    Dim ctl As MSForms.Control
+    Set ctl = GetNamedControl(controlName)
+    GetControlValue = Trim$(CStr(ctl.Value))
+End Function
+
+Private Sub SetControlValue(ByVal controlName As String, ByVal value As String)
+    Dim ctl As MSForms.Control
+    Set ctl = GetNamedControl(controlName)
+    ctl.Value = value
+End Sub
+
+Private Function GetNamedControl(ByVal controlName As String) As MSForms.Control
+    Dim ctl As MSForms.Control
+
+    On Error Resume Next
+    Set ctl = Me.Controls(controlName)
+    On Error GoTo 0
+
+    If ctl Is Nothing Then
+        Err.Raise vbObjectError + 9100, "UF_NewBOM.GetNamedControl", _
+                  "Missing control '" & controlName & "' on form UF_NewBOM."
+    End If
+
+    Set GetNamedControl = ctl
+End Function
