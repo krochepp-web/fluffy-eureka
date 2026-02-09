@@ -160,7 +160,7 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
     End If
 
     Set wb = ThisWorkbook
-    Set loBom = GetActiveBomTable_Internal()
+    Set loBom = GetActiveBomTable()
     Set wsComps = wb.Worksheets(SH_COMPS)
     Set loComps = wsComps.ListObjects(LO_COMPS)
 
@@ -430,7 +430,7 @@ Private Sub AddSelectedPickerRowsToActiveBOM(ByVal wb As Workbook)
     End If
 
     ' Active BOM is the active sheet at run time
-    Set loBom = GetActiveBomTable_Internal()
+    Set loBom = GetActiveBomTable()
 
     ' Iterate distinct rows in selection (by row index)
     Dim dicRows As Object
@@ -502,8 +502,8 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
 End Sub
 
-Public Function GetActiveBomTable_Picker() As ListObject
-    Set GetActiveBomTable_Picker = GetActiveBomTable_Internal()
+Public Function GetActiveBomTable_Public() As ListObject
+    Set GetActiveBomTable_Public = GetActiveBomTable()
 End Function
 
 '==========================
@@ -619,8 +619,8 @@ EH:
     GateReady_Safe = False
 End Function
 
-Private Function GetActiveBomTable_Internal() As ListObject
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.GetActiveBomTable_Internal"
+Private Function GetActiveBomTable() As ListObject
+    Const PROC_NAME As String = "M_Data_BOMs_Picker.GetActiveBomTable"
 
     Dim wsBom As Worksheet
     Dim loBom As ListObject
@@ -638,7 +638,7 @@ Private Function GetActiveBomTable_Internal() As ListObject
     RequireColumn loBom, "QtyPer"
     RequireColumn loBom, "CompNotes"
 
-    Set GetActiveBomTable_Internal = loBom
+    Set GetActiveBomTable = loBom
 End Function
 
 Private Sub RequireColumn(ByVal lo As ListObject, ByVal header As String)
