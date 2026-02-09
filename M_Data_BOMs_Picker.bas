@@ -160,7 +160,7 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
     End If
 
     Set wb = ThisWorkbook
-    Set loBom = GetActiveBOMTable(wb)
+    Set loBom = GetActiveBomTable_Internal()
     Set wsComps = wb.Worksheets(SH_COMPS)
     Set loComps = wsComps.ListObjects(LO_COMPS)
 
@@ -430,7 +430,7 @@ Private Sub AddSelectedPickerRowsToActiveBOM(ByVal wb As Workbook)
     End If
 
     ' Active BOM is the active sheet at run time
-    Set loBom = GetActiveBomTable()
+    Set loBom = GetActiveBomTable_Internal()
 
     ' Iterate distinct rows in selection (by row index)
     Dim dicRows As Object
@@ -502,8 +502,8 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
 End Sub
 
-Public Function GetActiveBomTable_Public() As ListObject
-    Set GetActiveBomTable_Public = GetActiveBomTable()
+Public Function GetActiveBomTable_Picker() As ListObject
+    Set GetActiveBomTable_Picker = GetActiveBomTable_Internal()
 End Function
 
 '==========================
@@ -619,8 +619,8 @@ EH:
     GateReady_Safe = False
 End Function
 
-Private Function GetActiveBomTable() As ListObject
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.GetActiveBomTable"
+Private Function GetActiveBomTable_Internal() As ListObject
+    Const PROC_NAME As String = "M_Data_BOMs_Picker.GetActiveBomTable_Internal"
 
     Dim wsBom As Worksheet
     Dim loBom As ListObject
@@ -638,7 +638,7 @@ Private Function GetActiveBomTable() As ListObject
     RequireColumn loBom, "QtyPer"
     RequireColumn loBom, "CompNotes"
 
-    Set GetActiveBomTable = loBom
+    Set GetActiveBomTable_Internal = loBom
 End Function
 
 Private Sub RequireColumn(ByVal lo As ListObject, ByVal header As String)
@@ -660,24 +660,6 @@ Private Function GetColIndex(ByVal lo As ListObject, ByVal header As String) As 
         End If
     Next lc
     GetColIndex = 0
-End Function
-
-Private Function GetActiveBOMTable(ByVal wb As Workbook) As ListObject
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.GetActiveBOMTable"
-    Dim wsBom As Worksheet
-
-    Set wsBom = ActiveSheet
-    If wsBom Is Nothing Then Err.Raise vbObjectError + 8600, PROC_NAME, "No active sheet."
-    If wsBom.ListObjects.Count < 1 Then Err.Raise vbObjectError + 8601, PROC_NAME, "Active sheet has no BOM table (ListObject)."
-    Set GetActiveBOMTable = wsBom.ListObjects(1)
-
-    RequireColumn GetActiveBOMTable, "CompID"
-    RequireColumn GetActiveBOMTable, "OurPN"
-    RequireColumn GetActiveBOMTable, "OurRev"
-    RequireColumn GetActiveBOMTable, "Description"
-    RequireColumn GetActiveBOMTable, "UOM"
-    RequireColumn GetActiveBOMTable, "QtyPer"
-    RequireColumn GetActiveBOMTable, "CompNotes"
 End Function
 
 Private Function Comps_LookupActive(ByVal loComps As ListObject, ByVal pn As String, ByVal rev As String, ByVal activeLabel As String, _
