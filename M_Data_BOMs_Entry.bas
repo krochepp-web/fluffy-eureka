@@ -6,7 +6,8 @@ Option Explicit
 '
 ' Purpose:
 '   Create a new BOM sheet from BOM_TEMPLATE for a top assembly (TA) WITHOUT
-'   requiring Comps.IsBuildable. Prompts for TAID (unique), TAPN, TARev, TADesc.
+'   requiring Comps.IsBuildable. Collects TAID (unique), TAPN, TARev, TADesc
+'   via the new BOM form and registers the result in BOMS.
 '   Creates sheet "BOM_<TAID>" (normalized; unique if needed) and registers row
 '   in BOMS.TBL_BOMS. Includes line-numbered diagnostics for debugging Error 13.
 '
@@ -30,6 +31,24 @@ Option Explicit
 
 Public Sub UI_Create_BOM_For_Assembly()
     Const PROC_NAME As String = "M_Data_BOMs_Entry.UI_Create_BOM_For_Assembly"
+
+    On Error GoTo EH
+
+    UF_NewBOM.InitForm ThisWorkbook
+    UF_NewBOM.Show vbModal
+    Exit Sub
+
+EH:
+    MsgBox "New BOM form failed to open." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New BOM"
+End Sub
+
+Public Sub Create_BOM_For_Assembly_FromInputs( _
+    ByVal taId As String, _
+    ByVal taPn As String, _
+    ByVal taRev As String, _
+    ByVal taDesc As String)
+    Const PROC_NAME As String = "M_Data_BOMs_Entry.Create_BOM_For_Assembly_FromInputs"
 
     Const SH_TEMPLATE As String = "BOM_TEMPLATE"
     Const LO_TEMPLATE As String = "TBL_BOM_TEMPLATE"
@@ -56,11 +75,6 @@ Public Sub UI_Create_BOM_For_Assembly()
     Dim loBoms As ListObject
     Dim loComps As ListObject
     Dim loNew As ListObject
-
-    Dim taId As String
-    Dim taPn As String
-    Dim taRev As String
-    Dim taDesc As String
 
     Dim bomId As String
     Dim newSheetName As String
@@ -97,29 +111,27 @@ Public Sub UI_Create_BOM_For_Assembly()
 200 RequireColumn loBoms, "AssemblyID"
 210 RequireColumn loBoms, "BOM_NOTES"
 
-    ' Prompts
-220 taId = Trim$(InputBox("Enter TAID (Top Assembly ID). Must be unique.", "New BOM"))
-230 If Len(taId) = 0 Then GoTo CleanExit
+    ' Inputs
+220 taId = Trim$(taId)
+230 taPn = Trim$(taPn)
+240 taRev = Trim$(taRev)
+250 taDesc = Trim$(taDesc)
 
-240 If AssemblyId_Exists(loBoms, taId) Then
-250     MsgBox "TAID '" & taId & "' already exists in BOMS (AssemblyID). Choose a unique TAID.", vbExclamation, "New BOM"
-260     GoTo CleanExit
-270 End If
+260 If Len(taId) = 0 Or Len(taPn) = 0 Or Len(taRev) = 0 Or Len(taDesc) = 0 Then
+270     MsgBox "All fields are required (TAID, TAPN, TARev, TADesc).", vbExclamation, "New BOM"
+280     GoTo CleanExit
+290 End If
 
-280 taPn = Trim$(InputBox("Enter TAPN (Top Assembly Part Number).", "New BOM (" & taId & ")"))
-290 If Len(taPn) = 0 Then GoTo CleanExit
+300 If AssemblyId_Exists(loBoms, taId) Then
+310     MsgBox "TAID '" & taId & "' already exists in BOMS (AssemblyID). Choose a unique TAID.", vbExclamation, "New BOM"
+320     GoTo CleanExit
+330 End If
 
-300 taRev = Trim$(InputBox("Enter TA Revision.", "New BOM (" & taId & " / " & taPn & ")"))
-310 If Len(taRev) = 0 Then GoTo CleanExit
-
-320 If PnRev_Exists_InBomsNotes(loBoms, taPn, taRev) Then
-330     MsgBox "PN/Revision combination already exists in BOMS (via BOM_NOTES scan)." & vbCrLf & _
+340 If PnRev_Exists_InBomsNotes(loBoms, taPn, taRev) Then
+350     MsgBox "PN/Revision combination already exists in BOMS (via BOM_NOTES scan)." & vbCrLf & _
                "TAPN=" & taPn & ", TARev=" & taRev, vbExclamation, "New BOM"
-340     GoTo CleanExit
-350 End If
-
-360 taDesc = Trim$(InputBox("Enter TA Description.", "New BOM (" & taId & " / " & taPn & " / " & taRev & ")"))
-370 If Len(taDesc) = 0 Then GoTo CleanExit
+360     GoTo CleanExit
+370 End If
 
     ' Optional Comps validation (best-effort)
 380 Set loComps = Nothing
@@ -514,5 +526,3 @@ Private Function GetUserNameSafe() As String
 2720 If Len(Trim$(u)) = 0 Then u = "UNKNOWN"
 2730 GetUserNameSafe = u
 End Function
-
-
