@@ -38,8 +38,10 @@ Public Sub UI_Create_BOM_For_Assembly( _
 
     On Error GoTo EH
 
-    UF_NewBOM.InitForm ThisWorkbook
-    UF_NewBOM.Show vbModal
+    Dim frm As UF_NewBOM
+    Set frm = New UF_NewBOM
+    frm.InitForm ThisWorkbook
+    frm.Show vbModal
     Exit Sub
 
 EH:
