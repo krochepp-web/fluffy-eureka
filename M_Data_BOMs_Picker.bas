@@ -5,8 +5,8 @@ Option Explicit
 ' Module: M_Data_BOMs_Picker
 '
 ' Purpose:
-'   Provide an in-sheet "picker" UX to search Components by description (and
-'   optionally revision) and add selected rows to the active BOM sheet.
+'   Provide an in-sheet and form-based "picker" UX to search Components by
+'   description (and optionally revision) and add selected rows to the active BOM sheet.
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - Comps sheet: TBL_COMPS
@@ -94,25 +94,19 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
 End Sub
 
-Public Sub UI_Open_ComponentPickerForm()
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.UI_Open_ComponentPickerForm"
+Public Sub UI_Open_ComponentPicker_Form()
+    Const PROC_NAME As String = "M_Data_BOMs_Picker.UI_Open_ComponentPicker_Form"
     On Error GoTo EH
 
-    If Not GateReady_Safe(True) Then GoTo CleanExit
+    If Not GateReady_Safe(True) Then Exit Sub
 
-    Dim frm As UF_BOM_Picker
-    Set frm = New UF_BOM_Picker
-    frm.Show vbModal
-
-CleanExit:
-    On Error Resume Next
-    Unload frm
+    UF_ComponentPicker.InitForm ThisWorkbook
+    UF_ComponentPicker.Show vbModal
     Exit Sub
 
 EH:
-    MsgBox "Picker form failed." & vbCrLf & _
+    MsgBox "Component picker form failed to open." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
-    Resume CleanExit
 End Sub
 
 Public Sub UI_Refresh_PickerResults()
@@ -276,9 +270,6 @@ Private Sub RefreshPickerResults(ByVal wb As Workbook)
     Dim activeOnly As Boolean
     Dim maxResults As Long
 
-    Dim outArr() As Variant
-    Dim outCount As Long
-
     On Error GoTo EH
 
     Set wsPick = wb.Worksheets(SH_PICKERS)
@@ -290,9 +281,15 @@ Private Sub RefreshPickerResults(ByVal wb As Workbook)
     maxResults = ParseLongDefault(wsPick.Range(CELL_MAXRESULTS).value, DEFAULT_MAXRESULTS)
     If maxResults < 1 Then maxResults = DEFAULT_MAXRESULTS
 
-    Picker_GetResultsArray searchText, revFilter, activeOnly, maxResults, outArr, outCount
+    Dim outArr As Variant
+    Dim outCount As Long
+    outArr = Picker_GetResults(wb, searchText, revFilter, activeOnly, maxResults, outCount)
 
-    WritePickResults loPick, outArr, outCount
+    If outCount = 0 Then
+        ClearPickResults loPick
+    Else
+        WritePickResults loPick, outArr, outCount
+    End If
 
     Exit Sub
 
@@ -300,25 +297,25 @@ EH:
     Err.Raise Err.Number, PROC_NAME, Err.Description
 End Sub
 
-Public Sub Picker_GetResultsArray(ByVal searchText As String, _
-                                  ByVal revFilter As String, _
-                                  ByVal activeOnly As Boolean, _
-                                  ByVal maxResults As Long, _
-                                  ByRef outArr() As Variant, _
-                                  ByRef outCount As Long)
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.Picker_GetResultsArray"
+Public Function Picker_GetResults( _
+    ByVal wb As Workbook, _
+    ByVal searchText As String, _
+    ByVal revFilter As String, _
+    ByVal activeOnly As Boolean, _
+    ByVal maxResults As Long, _
+    ByRef outCount As Long) As Variant
+    Const PROC_NAME As String = "M_Data_BOMs_Picker.Picker_GetResults"
 
-    Dim wb As Workbook
     Dim wsComps As Worksheet
     Dim loComps As ListObject
 
     Dim idxCompID As Long, idxPn As Long, idxRev As Long, idxDesc As Long, idxUom As Long, idxNotes As Long, idxRS As Long
     Dim compsArr As Variant
+    Dim outArr() As Variant
     Dim r As Long
 
     On Error GoTo EH
 
-    Set wb = ThisWorkbook
     Set wsComps = wb.Worksheets(SH_COMPS)
     Set loComps = wsComps.ListObjects(LO_COMPS)
 
@@ -334,15 +331,15 @@ Public Sub Picker_GetResultsArray(ByVal searchText As String, _
         Err.Raise vbObjectError + 8101, PROC_NAME, "Comps.TBL_COMPS missing one or more required headers."
     End If
 
+    outCount = 0
     If loComps.DataBodyRange Is Nothing Then
-        outCount = 0
-        Exit Sub
+        Picker_GetResults = Empty
+        Exit Function
     End If
 
     compsArr = loComps.DataBodyRange.value
-
+    If maxResults < 1 Then maxResults = DEFAULT_MAXRESULTS
     ReDim outArr(1 To maxResults, 1 To 7)
-    outCount = 0
 
     For r = 1 To UBound(compsArr, 1)
         Dim cDesc As String, cNotes As String, cPN As String, cRev As String, cRS As String
@@ -362,9 +359,9 @@ Public Sub Picker_GetResultsArray(ByVal searchText As String, _
         End If
 
         If Len(searchText) > 0 Then
-            If InStr(1, LCase$(cDesc), LCase$(searchText), vbTextCompare) = 0 And _
-               InStr(1, LCase$(cNotes), LCase$(searchText), vbTextCompare) = 0 And _
-               InStr(1, LCase$(cPN), LCase$(searchText), vbTextCompare) = 0 Then
+            If InStr(1, LCase$(cDesc), searchText, vbTextCompare) = 0 And _
+               InStr(1, LCase$(cNotes), searchText, vbTextCompare) = 0 And _
+               InStr(1, LCase$(cPN), searchText, vbTextCompare) = 0 Then
                 GoTo NextRow
             End If
         End If
@@ -383,11 +380,16 @@ Public Sub Picker_GetResultsArray(ByVal searchText As String, _
 NextRow:
     Next r
 
-    Exit Sub
+    If outCount = 0 Then
+        Picker_GetResults = Empty
+    Else
+        Picker_GetResults = Slice2D(outArr, outCount, 7)
+    End If
+    Exit Function
 
 EH:
     Err.Raise Err.Number, PROC_NAME, Err.Description
-End Sub
+End Function
 
 Private Sub AddSelectedPickerRowsToActiveBOM(ByVal wb As Workbook)
     Const PROC_NAME As String = "M_Data_BOMs_Picker.AddSelectedPickerRowsToActiveBOM"
@@ -399,7 +401,6 @@ Private Sub AddSelectedPickerRowsToActiveBOM(ByVal wb As Workbook)
     Dim area As Range
     Dim rowCell As Range
 
-    Dim wsBom As Worksheet
     Dim loBom As ListObject
 
     Dim qtyPer As Double
@@ -429,19 +430,7 @@ Private Sub AddSelectedPickerRowsToActiveBOM(ByVal wb As Workbook)
     End If
 
     ' Active BOM is the active sheet at run time
-    Set wsBom = ActiveSheet
-    If wsBom Is Nothing Then Err.Raise vbObjectError + 8300, PROC_NAME, "No active sheet."
-    If wsBom.ListObjects.Count < 1 Then Err.Raise vbObjectError + 8301, PROC_NAME, "Active sheet has no BOM table (ListObject)."
-    Set loBom = wsBom.ListObjects(1)
-
-    ' Validate BOM required headers
-    RequireColumn loBom, "CompID"
-    RequireColumn loBom, "OurPN"
-    RequireColumn loBom, "OurRev"
-    RequireColumn loBom, "Description"
-    RequireColumn loBom, "UOM"
-    RequireColumn loBom, "QtyPer"
-    RequireColumn loBom, "CompNotes"
+    Set loBom = GetActiveBomTable()
 
     ' Iterate distinct rows in selection (by row index)
     Dim dicRows As Object
@@ -470,12 +459,7 @@ Private Sub AddSelectedPickerRowsToActiveBOM(ByVal wb As Workbook)
             notes = SafeText(loPick.ListColumns("ComponentNotes").DataBodyRange.Cells(pickRowIndex, 1).value)
             rs = SafeText(loPick.ListColumns("RevStatus").DataBodyRange.Cells(pickRowIndex, 1).value)
 
-            ' Extra guard: ensure Active (in case user turned off ActiveOnly or filters)
-            If StrComp(rs, ACTIVE_LABEL, vbTextCompare) <> 0 Then
-                MsgBox "Skipping non-active component: " & pn & " / " & rev & " (RevStatus=" & rs & ")", vbExclamation, "Add Selected Components"
-            Else
-                Bom_UpsertComponent loBom, compId, pn, rev, desc, uom, qtyPer, notes
-            End If
+            Picker_AddComponentToActiveBOM loBom, compId, pn, rev, desc, uom, qtyPer, notes, rs
         End If
     Next key
 
@@ -485,6 +469,42 @@ Private Sub AddSelectedPickerRowsToActiveBOM(ByVal wb As Workbook)
 EH:
     Err.Raise Err.Number, PROC_NAME, Err.Description
 End Sub
+
+Public Sub Picker_AddComponentToActiveBOM( _
+    ByVal loBom As ListObject, _
+    ByVal compId As String, _
+    ByVal pn As String, _
+    ByVal rev As String, _
+    ByVal desc As String, _
+    ByVal uom As String, _
+    ByVal qtyPer As Double, _
+    ByVal notes As String, _
+    ByVal revStatus As String)
+    Const PROC_NAME As String = "M_Data_BOMs_Picker.Picker_AddComponentToActiveBOM"
+
+    On Error GoTo EH
+
+    If qtyPer <= 0 Then
+        MsgBox "QtyPer must be > 0.", vbExclamation, "Component Picker"
+        Exit Sub
+    End If
+
+    If StrComp(revStatus, ACTIVE_LABEL, vbTextCompare) <> 0 Then
+        MsgBox "Skipping non-active component: " & pn & " / " & rev & " (RevStatus=" & revStatus & ")", vbExclamation, "Component Picker"
+        Exit Sub
+    End If
+
+    Bom_UpsertComponent loBom, compId, pn, rev, desc, uom, qtyPer, notes
+    Exit Sub
+
+EH:
+    MsgBox "Add component failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
+End Sub
+
+Public Function GetActiveBomTable_Public() As ListObject
+    Set GetActiveBomTable_Public = GetActiveBomTable()
+End Function
 
 '==========================
 ' BOM upsert (deterministic)
@@ -548,7 +568,7 @@ Private Sub ClearPickResults(ByVal loPick As ListObject)
     End If
 End Sub
 
-Private Sub WritePickResults(ByVal loPick As ListObject, ByRef outArr() As Variant, ByVal outCount As Long)
+Private Sub WritePickResults(ByVal loPick As ListObject, ByRef outArr As Variant, ByVal outCount As Long)
     Dim ws As Worksheet
     Set ws = loPick.Parent
 
@@ -597,6 +617,28 @@ Private Function GateReady_Safe(Optional ByVal showUserMessage As Boolean = True
     Exit Function
 EH:
     GateReady_Safe = False
+End Function
+
+Private Function GetActiveBomTable() As ListObject
+    Const PROC_NAME As String = "M_Data_BOMs_Picker.GetActiveBomTable"
+
+    Dim wsBom As Worksheet
+    Dim loBom As ListObject
+
+    Set wsBom = ActiveSheet
+    If wsBom Is Nothing Then Err.Raise vbObjectError + 8300, PROC_NAME, "No active sheet."
+    If wsBom.ListObjects.Count < 1 Then Err.Raise vbObjectError + 8301, PROC_NAME, "Active sheet has no BOM table (ListObject)."
+    Set loBom = wsBom.ListObjects(1)
+
+    RequireColumn loBom, "CompID"
+    RequireColumn loBom, "OurPN"
+    RequireColumn loBom, "OurRev"
+    RequireColumn loBom, "Description"
+    RequireColumn loBom, "UOM"
+    RequireColumn loBom, "QtyPer"
+    RequireColumn loBom, "CompNotes"
+
+    Set GetActiveBomTable = loBom
 End Function
 
 Private Sub RequireColumn(ByVal lo As ListObject, ByVal header As String)
