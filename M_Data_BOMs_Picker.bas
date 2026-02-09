@@ -100,10 +100,10 @@ Public Sub UI_Open_ComponentPicker_Form()
 
     If Not GateReady_Safe(True) Then Exit Sub
 
-    Dim frm As UF_ComponentPicker
-    Set frm = New UF_ComponentPicker
-    frm.InitForm ThisWorkbook
-    frm.Show vbModal
+    With UF_ComponentPicker
+        .InitForm ThisWorkbook
+        .Show vbModal
+    End With
     Exit Sub
 
 EH:
