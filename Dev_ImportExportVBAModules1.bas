@@ -42,7 +42,15 @@ Private Const DIALOG_FOLDER_PICKER As Long = 4
 '========================
 
 Public Sub Export_All_VBAModules_SaveAsFolder()
-    Const PROC_NAME As String = "Export_All_VBAModules_SaveAsFolder"
+    Export_All_VBAModules False
+End Sub
+
+Public Sub Export_All_VBAModules_ToTxt()
+    Export_All_VBAModules True
+End Sub
+
+Public Sub Export_All_VBAModules(Optional ByVal exportAsText As Boolean = False)
+    Const PROC_NAME As String = "Export_All_VBAModules"
 
     Dim fPath As Variant
     Dim exportFolder As String
@@ -61,19 +69,27 @@ Public Sub Export_All_VBAModules_SaveAsFolder()
         Exit Sub
     End If
 
-    ' Use Save As to select a REAL filesystem destination.
-    ' We ask for a file name, then export to its folder.
-    fPath = Application.GetSaveAsFilename( _
-                InitialFileName:=GetDefaultExportStub(), _
-                FileFilter:="Text Files (*.txt), *.txt", _
-                title:="Pick export folder (file name is ignored; folder is used)")
+    If exportAsText Then
+        exportFolder = Get_ExportFolder()
+        If exportFolder = vbNullString Then
+            MsgBox "Export cancelled by user.", vbInformation
+            Exit Sub
+        End If
+    Else
+        ' Use Save As to select a REAL filesystem destination.
+        ' We ask for a file name, then export to its folder.
+        fPath = Application.GetSaveAsFilename( _
+                    InitialFileName:=GetDefaultExportStub(), _
+                    FileFilter:="Text Files (*.txt), *.txt", _
+                    title:="Pick export folder (file name is ignored; folder is used)")
 
-    If VarType(fPath) = vbBoolean And fPath = False Then Exit Sub ' user cancelled
+        If VarType(fPath) = vbBoolean And fPath = False Then Exit Sub ' user cancelled
 
-    exportFolder = GetFolderFromPath(CStr(fPath))
-    If Len(exportFolder) = 0 Then
-        MsgBox "Could not resolve export folder from selected path.", vbCritical, "Export Failed"
-        Exit Sub
+        exportFolder = GetFolderFromPath(CStr(fPath))
+        If Len(exportFolder) = 0 Then
+            MsgBox "Could not resolve export folder from selected path.", vbCritical, "Export Failed"
+            Exit Sub
+        End If
     End If
 
     ' Ensure folder exists (should, but guard anyway)
@@ -85,7 +101,11 @@ Public Sub Export_All_VBAModules_SaveAsFolder()
     LogHeader PROC_NAME, exportFolder
 
     okCount = 0: failCount = 0: hadErr52 = False: failReport = vbNullString
-    ExportComponentsToFolder exportFolder, okCount, failCount, hadErr52, failReport
+    If exportAsText Then
+        ExportComponentsToFolderTxt exportFolder, okCount, failCount, failReport
+    Else
+        ExportComponentsToFolder exportFolder, okCount, failCount, hadErr52, failReport
+    End If
 
     WriteExportInfo exportFolder, okCount, failCount, hadErr52
 
@@ -237,6 +257,56 @@ ExportFail:
     GoTo ContinueNext
 End Sub
 
+Private Sub ExportComponentsToFolderTxt(ByVal exportFolder As String, _
+                                        ByRef okCount As Long, _
+                                        ByRef failCount As Long, _
+                                        ByRef failReport As String)
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim outFile As String
+    Dim fileNum As Long
+    Dim codeText As String
+    Dim lineCount As Long
+    Dim compNameSafe As String
+
+    For Each vbComp In ThisWorkbook.VBProject.VBComponents
+        compNameSafe = SafeFileName(CStr(Get_ComponentFileName(vbComp)))
+        outFile = exportFolder & "\" & compNameSafe & ".txt"
+
+        On Error GoTo ExportFail
+        Set codeMod = vbComp.CodeModule
+        lineCount = codeMod.CountOfLines
+
+        If lineCount > 0 Then
+            codeText = codeMod.lines(1, lineCount)
+        Else
+            codeText = vbNullString
+        End If
+
+        fileNum = FreeFile
+        Open outFile For Output As #fileNum
+        Print #fileNum, codeText
+        Close #fileNum
+        okCount = okCount + 1
+        On Error GoTo 0
+
+ContinueNext:
+    Next vbComp
+    Exit Sub
+
+ExportFail:
+    failCount = failCount + 1
+    failReport = failReport & vbCrLf & _
+        "- " & vbComp.Name & " -> " & outFile & " | Err " & Err.Number & ": " & Err.Description
+
+    Debug.Print "FAIL: " & vbComp.Name & " -> " & outFile
+    Debug.Print "      Err " & Err.Number & ": " & Err.Description
+
+    Err.Clear
+    On Error GoTo 0
+    GoTo ContinueNext
+End Sub
+
 '========================
 ' Provenance file
 '========================
@@ -330,6 +400,32 @@ End Function
 ' Component + filename utilities
 '========================
 
+Private Function Get_ExportFolder() As String
+    Dim fDialog As FileDialog
+
+    Set fDialog = Application.FileDialog(msoFileDialogFolderPicker)
+
+    With fDialog
+        .title = "Select folder to export VBA modules"
+        .AllowMultiSelect = False
+        If .Show <> -1 Then
+            Get_ExportFolder = vbNullString
+        Else
+            Get_ExportFolder = .SelectedItems(1)
+        End If
+    End With
+End Function
+
+Private Function Get_ComponentFileName(ByVal vbComp As Object) As String
+    ' Prefix document modules so they are obvious in source control
+    Select Case CLng(vbComp.Type)
+        Case 100 ' vbext_ct_Document
+            Get_ComponentFileName = "Doc_" & SafeFileName(CStr(vbComp.Name))
+        Case Else
+            Get_ComponentFileName = SafeFileName(CStr(vbComp.Name))
+    End Select
+End Function
+
 Private Function ComponentExtension(ByVal compType As Long) As String
     Select Case compType
         Case VB_COMP_STD_MODULE: ComponentExtension = ".bas" ' Std module
@@ -385,5 +481,3 @@ Private Function StandardModuleExists(ByVal moduleName As String, ByRef vbComp A
         End If
     Next comp
 End Function
-
-
