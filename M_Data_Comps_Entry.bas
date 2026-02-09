@@ -57,11 +57,11 @@ Option Explicit
 ' PUBLIC ENTRY POINTS
 '==========================
 Public Sub NewComponent()
-    UI_New_Component
+    RunNewComponent
 End Sub
 
-Public Sub UI_New_Component()
-    Const PROC_NAME As String = "M_Data_Comps_Entry.UI_New_Component"
+Private Sub RunNewComponent()
+    Const PROC_NAME As String = "M_Data_Comps_Entry.RunNewComponent"
 
     Const SH_COMPS As String = "Comps"
     Const LO_COMPS As String = "TBL_COMPS"
