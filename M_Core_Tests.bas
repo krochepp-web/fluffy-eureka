@@ -170,6 +170,28 @@ EH:
 End Sub
 
 '*******************************************************************************
+' Procedure:   Test_Logging
+'
+' Purpose:
+'   Smoke-test the logging helpers by writing INFO/WARN/ERROR entries.
+'
+' Outputs / Side effects:
+'   - Writes log entries via M_Core_Logging.
+'
+' Version:     v0.1.0
+' Author:      ChatGPT (assistant)
+' Date:        2025-11-28
+'*******************************************************************************
+
+Public Sub Test_Logging()
+    Const PROC_NAME As String = "Test_Logging"
+
+    LogInfo PROC_NAME, "This is an INFO test.", "Detail: nothing special."
+    LogWarn PROC_NAME, "This is a WARN test.", "Detail: check thresholds."
+    LogError PROC_NAME, "This is an ERROR test.", "Detail: simulated failure.", 1234
+End Sub
+
+'*******************************************************************************
 ' Helper: Ensure a report sheet exists; create if needed
 '*******************************************************************************
 Private Function EnsureReportSheet_Core(ByVal wb As Workbook, ByVal sheetName As String) As Worksheet
