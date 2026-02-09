@@ -1,5 +1,5 @@
 VERSION 5.00
-Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} UF_BOM_Create
+Begin VB.UserForm UF_BOM_Create
    Caption         =   "Create New BOM"
    ClientHeight    =   3000
    ClientLeft      =   90
@@ -80,10 +80,6 @@ Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} UF_BOM_Create
    End
 End
 Attribute VB_Name = "UF_BOM_Create"
-Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = False
-Attribute VB_PredeclaredId = True
-Attribute VB_Exposed = False
 Option Explicit
 
 Public Cancelled As Boolean
