@@ -3,7 +3,7 @@ Option Explicit
 
 '===========================================================
 ' Purpose:
-'   Export all VBA code modules (Std/Class/Document) to a user-
+'   Export all VBA modules (Std/Class/UserForms) to a user-
 '   selected folder using a Save As dialog (robust when the
 '   workbook path is an Office/OneDrive URL such as
 '   https://d.docs.live.net/...), plus import standard modules
@@ -13,7 +13,7 @@ Option Explicit
 '   - ThisWorkbook.VBProject.VBComponents
 '
 ' Outputs / Side effects:
-'   - Exports .bas / .cls for source control
+'   - Exports .bas / .cls / .frm (+ .frx)
 '   - Imports .bas (standard modules only)
 '   - Creates _EXPORT_INFO.txt in the destination folder
 '
