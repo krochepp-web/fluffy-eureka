@@ -201,6 +201,9 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 660 newTableName = BuildUniqueTableName(wb, "TBL_BOM_" & NormalizeName(taId))
 670 loNew.Name = newTableName
 
+    ' Populate TA Description field on new BOM sheet
+675 wsNew.Range("C4").Value = taDesc
+
     ' Register in BOMS table
 680 Dim lr As ListRow
 690 Set lr = loBoms.ListRows.Add
