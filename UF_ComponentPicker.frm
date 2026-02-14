@@ -155,7 +155,7 @@ Private Sub cmdAdd_Click()
     End If
 
     Dim loBom As ListObject
-    Set loBom = M_Data_BOMs_Picker.GetActiveBomTable_Picker()
+    Set loBom = M_Data_BOMs_Picker.GetActiveBomTable_Public()
 
     Dim i As Long
     Dim added As Long
