@@ -145,8 +145,8 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 230 RequireColumn loBoms, "TADesc"
 
     ' Inputs
-220 taId = Trim$(taId)
-230 taPn = Trim$(taPn)
+235 taId = Trim$(taId)
+236 taPn = Trim$(taPn)
 240 taRev = Trim$(taRev)
 250 taDesc = Trim$(taDesc)
 255 bomNotes = Trim$(bomNotes)
