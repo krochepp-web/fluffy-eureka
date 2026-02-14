@@ -3,7 +3,7 @@ Option Explicit
 
 '===========================================================
 ' Purpose:
-'   Export all VBA modules (Std/Class/UserForms) to a user-
+'   Export all VBA code modules (Std/Class/Document) to a user-
 '   selected folder using a Save As dialog (robust when the
 '   workbook path is an Office/OneDrive URL such as
 '   https://d.docs.live.net/...), plus import standard modules
@@ -13,7 +13,7 @@ Option Explicit
 '   - ThisWorkbook.VBProject.VBComponents
 '
 ' Outputs / Side effects:
-'   - Exports .bas / .cls / .frm (+ .frx)
+'   - Exports .bas / .cls for source control
 '   - Imports .bas (standard modules only)
 '   - Creates _EXPORT_INFO.txt in the destination folder
 '
@@ -34,7 +34,6 @@ Option Explicit
 
 Private Const VB_COMP_STD_MODULE As Long = 1
 Private Const VB_COMP_CLASS_MODULE As Long = 2
-Private Const VB_COMP_USERFORM As Long = 3
 Private Const DIALOG_FOLDER_PICKER As Long = 4
 
 '========================
@@ -430,7 +429,6 @@ Private Function ComponentExtension(ByVal compType As Long) As String
     Select Case compType
         Case VB_COMP_STD_MODULE: ComponentExtension = ".bas" ' Std module
         Case VB_COMP_CLASS_MODULE: ComponentExtension = ".cls" ' Class module
-        Case VB_COMP_USERFORM: ComponentExtension = ".frm" ' UserForm
         Case Else: ComponentExtension = vbNullString ' Document modules
     End Select
 End Function

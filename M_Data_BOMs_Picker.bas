@@ -5,7 +5,7 @@ Option Explicit
 ' Module: M_Data_BOMs_Picker
 '
 ' Purpose:
-'   Provide an in-sheet and form-based "picker" UX to search Components by
+'   Provide an in-sheet "picker" UX to search Components by
 '   description (and optionally revision) and add selected rows to the active BOM sheet.
 '
 ' Inputs (Tabs/Tables/Headers):
@@ -91,23 +91,6 @@ CleanExit:
 
 EH:
     MsgBox "Picker open/refresh failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
-End Sub
-
-Public Sub UI_Open_ComponentPicker_Form()
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.UI_Open_ComponentPicker_Form"
-    On Error GoTo EH
-
-    If Not GateReady_Safe(True) Then Exit Sub
-
-    With UF_ComponentPicker
-        .InitForm ThisWorkbook
-        .Show vbModal
-    End With
-    Exit Sub
-
-EH:
-    MsgBox "Component picker form failed to open." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
 End Sub
 
