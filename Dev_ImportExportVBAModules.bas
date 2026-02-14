@@ -1,4 +1,4 @@
-Attribute VB_Name = "Dev_ImportExportVBAModules1"
+Attribute VB_Name = "Dev_ImportExportVBAModules"
 Option Explicit
 
 '===========================================================
@@ -161,7 +161,8 @@ Public Sub Import_All_BAS_Modules_FromFolder()
     Do While Len(fileName) > 0
         foundCount = foundCount + 1
         filePath = importFolder & "\" & fileName
-        moduleName = Left$(fileName, Len(fileName) - 4)
+        moduleName = ResolveModuleNameFromBasFile(filePath)
+        If Len(moduleName) = 0 Then moduleName = Left$(fileName, Len(fileName) - 4)
 
         On Error GoTo ImportFail
 
@@ -457,6 +458,39 @@ Private Sub LogHeader(ByVal procName As String, ByVal targetFolder As String)
     Debug.Print "Workbook: " & ThisWorkbook.Name
     Debug.Print "Folder: " & targetFolder
 End Sub
+
+
+Private Function ResolveModuleNameFromBasFile(ByVal filePath As String) As String
+    Dim f As Integer
+    Dim lineText As String
+    Dim p As Long
+
+    On Error GoTo EH
+
+    f = FreeFile
+    Open filePath For Input As #f
+
+    Do While Not EOF(f)
+        Line Input #f, lineText
+        If InStr(1, lineText, "Attribute VB_Name", vbTextCompare) > 0 Then
+            p = InStr(1, lineText, "=", vbBinaryCompare)
+            If p > 0 Then
+                ResolveModuleNameFromBasFile = Trim$(Mid$(lineText, p + 1))
+                ResolveModuleNameFromBasFile = Replace$(ResolveModuleNameFromBasFile, Chr$(34), "")
+                ResolveModuleNameFromBasFile = Trim$(ResolveModuleNameFromBasFile)
+            End If
+            Exit Do
+        End If
+    Loop
+
+    Close #f
+    Exit Function
+
+EH:
+    On Error Resume Next
+    If f > 0 Then Close #f
+    ResolveModuleNameFromBasFile = vbNullString
+End Function
 
 Private Sub RemoveStandardModuleIfExists(ByVal moduleName As String, ByRef vbComp As Object)
     If StandardModuleExists(moduleName, vbComp) Then
