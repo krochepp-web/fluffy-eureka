@@ -1,4 +1,3 @@
-' Module:      M_Core_Tests
 Attribute VB_Name = "M_Core_Tests"
 Option Explicit
 '*******************************************************************************
