@@ -30,19 +30,23 @@ Option Explicit
 ' Date: 2026-02-07
 '===============================================================================
 
-Public Sub Debug_Report(ByVal procName As String, ByVal errObj As ErrObject, Optional ByVal context As String = "")
+Public Sub Debug_Report(ByVal procName As String, ByVal errNumber As Long, ByVal errDescription As String, Optional ByVal errLine As Long = 0, Optional ByVal context As String = "")
     Dim msg As String
     Dim choice As VbMsgBoxResult
 
     msg = "VBA RUNTIME ERROR" & vbCrLf & _
           "-----------------" & vbCrLf & _
           "Procedure : " & procName & vbCrLf & _
-          "Error #   : " & errObj.Number & vbCrLf & _
-          "Description: " & errObj.Description & vbCrLf & _
-          "Line (Erl): " & CStr(Erl) & vbCrLf
+          "Error #   : " & errNumber & vbCrLf & _
+          "Description: " & errDescription & vbCrLf & _
+          "Line (Erl): " & CStr(errLine) & vbCrLf
 
     If Len(context) > 0 Then
         msg = msg & vbCrLf & "Context:" & vbCrLf & context & vbCrLf
+    End If
+
+    If errNumber = 0 And Len(errDescription) = 0 Then
+        msg = msg & vbCrLf & "(No active VBA error details were captured.)" & vbCrLf
     End If
 
     msg = msg & vbCrLf & _
