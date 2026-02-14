@@ -202,7 +202,7 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 670 loNew.Name = newTableName
 
     ' Populate TA Description field on new BOM sheet
-675 wsNew.Range("C4").Value = taDesc
+675 wsNew.Range("C4").value = taDesc
 
     ' Register in BOMS table
 680 Dim lr As ListRow
