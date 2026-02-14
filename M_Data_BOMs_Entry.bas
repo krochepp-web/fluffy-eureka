@@ -7,7 +7,7 @@ Option Explicit
 ' Purpose:
 '   Create a new BOM sheet from BOM_TEMPLATE for a top assembly (TA) WITHOUT
 '   requiring Comps.IsBuildable. Collects TAID (unique), TAPN, TARev, TADesc
-'   via the new BOM form and registers the result in BOMS.
+'   from optional arguments or manual prompts, then registers the result in BOMS.
 '   Creates sheet "BOM_<TAID>" (normalized; unique if needed) and registers row
 '   in BOMS.TBL_BOMS. Includes line-numbered diagnostics for debugging Error 13.
 '
@@ -36,17 +36,36 @@ Public Sub UI_Create_BOM_For_Assembly( _
     Optional ByVal taDescIn As String = "")
     Const PROC_NAME As String = "M_Data_BOMs_Entry.UI_Create_BOM_For_Assembly"
 
+    Dim taId As String
+    Dim taPn As String
+    Dim taRev As String
+    Dim taDesc As String
+
     On Error GoTo EH
 
-    Dim frm As UF_NewBOM
-    Set frm = New UF_NewBOM
-    frm.InitForm ThisWorkbook
-    frm.Show vbModal
+    If Not GateReady_Safe(True) Then Exit Sub
+
+    taId = Trim$(taIdIn)
+    taPn = Trim$(taPnIn)
+    taRev = Trim$(taRevIn)
+    taDesc = Trim$(taDescIn)
+
+    If Len(taId) = 0 Then taId = PromptText("Enter TAID (unique):", "New BOM")
+    If Len(taPn) = 0 Then taPn = PromptText("Enter top assembly part number (TAPN):", "New BOM")
+    If Len(taRev) = 0 Then taRev = PromptText("Enter top assembly revision (TARev):", "New BOM")
+    If Len(taDesc) = 0 Then taDesc = PromptText("Enter top assembly description (TADesc):", "New BOM")
+
+    If Len(taId) = 0 Or Len(taPn) = 0 Or Len(taRev) = 0 Or Len(taDesc) = 0 Then
+        MsgBox "BOM creation cancelled. All fields are required.", vbInformation, "New BOM"
+        Exit Sub
+    End If
+
+    Create_BOM_For_Assembly_FromInputs taId, taPn, taRev, taDesc
     Exit Sub
 
 EH:
-    MsgBox "New BOM form failed to open." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New BOM"
+    MsgBox "Manual BOM creation failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
 End Sub
 
 Public Sub Create_BOM_For_Assembly_FromInputs( _
@@ -220,42 +239,6 @@ EH:
     Resume CleanExit
 End Sub
 
-Public Sub UI_Create_BOM_For_Assembly_Form()
-    Const PROC_NAME As String = "M_Data_BOMs_Entry.UI_Create_BOM_For_Assembly_Form"
-
-    Dim frm As UF_BOM_Create
-    Dim taId As String
-    Dim taPn As String
-    Dim taRev As String
-    Dim taDesc As String
-
-    On Error GoTo EH
-
-    If Not GateReady_Safe(True) Then Exit Sub
-
-    Set frm = New UF_BOM_Create
-    frm.Show vbModal
-
-    If frm.Cancelled Then GoTo CleanExit
-
-    taId = frm.TAID
-    taPn = frm.TAPN
-    taRev = frm.TARev
-    taDesc = frm.TADesc
-
-    UI_Create_BOM_For_Assembly taId, taPn, taRev, taDesc
-
-CleanExit:
-    On Error Resume Next
-    Unload frm
-    Exit Sub
-
-EH:
-    MsgBox "Form-based BOM creation failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
-    Resume CleanExit
-End Sub
-
 '==========================
 ' Safe conversions
 '==========================
@@ -267,6 +250,12 @@ Private Function SafeText(ByVal v As Variant) As String
     Else
         SafeText = Trim$(CStr(v))
     End If
+End Function
+
+Private Function PromptText(ByVal prompt As String, ByVal title As String) As String
+    Dim response As String
+    response = InputBox(prompt, title)
+    PromptText = Trim$(response)
 End Function
 
 Private Function SafeSheetNameSafe() As String
