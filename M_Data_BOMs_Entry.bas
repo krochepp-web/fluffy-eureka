@@ -6,14 +6,15 @@ Option Explicit
 '
 ' Purpose:
 '   Create a new BOM sheet from BOM_TEMPLATE for a top assembly (TA) WITHOUT
-'   requiring Comps.IsBuildable. Collects TAID (unique), TAPN, TARev, TADesc
-'   from optional arguments or manual prompts, then registers the result in BOMS.
+'   requiring Comps.IsBuildable. Collects TAID (unique), TAPN, TARev, TADesc,
+'   and optional BOM_NOTES from optional arguments or manual prompts, then
+'   registers the result in BOMS.
 '   Creates sheet "BOM_<TAID>" (normalized; unique if needed) and registers row
 '   in BOMS.TBL_BOMS. Includes line-numbered diagnostics for debugging Error 13.
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - BOM_TEMPLATE: TBL_BOM_TEMPLATE
-'   - BOMS: TBL_BOMS [BOMID, BOMTab, AssemblyID, BOM_NOTES]
+'   - BOMS: TBL_BOMS [BOMID, BOMTab, AssemblyID, BOM_NOTES] + optional [TAPN, TARev, TADesc]
 '   - Comps (optional): TBL_COMPS for best-effort TA validation
 '
 ' Outputs:
@@ -33,13 +34,15 @@ Public Sub UI_Create_BOM_For_Assembly( _
     Optional ByVal taIdIn As String = "", _
     Optional ByVal taPnIn As String = "", _
     Optional ByVal taRevIn As String = "", _
-    Optional ByVal taDescIn As String = "")
+    Optional ByVal taDescIn As String = "", _
+    Optional ByVal bomNotesIn As String = "")
     Const PROC_NAME As String = "M_Data_BOMs_Entry.UI_Create_BOM_For_Assembly"
 
     Dim taId As String
     Dim taPn As String
     Dim taRev As String
     Dim taDesc As String
+    Dim bomNotes As String
 
     On Error GoTo EH
 
@@ -49,18 +52,20 @@ Public Sub UI_Create_BOM_For_Assembly( _
     taPn = Trim$(taPnIn)
     taRev = Trim$(taRevIn)
     taDesc = Trim$(taDescIn)
+    bomNotes = Trim$(bomNotesIn)
 
     If Len(taId) = 0 Then taId = PromptText("Enter TAID (unique):", "New BOM")
     If Len(taPn) = 0 Then taPn = PromptText("Enter top assembly part number (TAPN):", "New BOM")
     If Len(taRev) = 0 Then taRev = PromptText("Enter top assembly revision (TARev):", "New BOM")
     If Len(taDesc) = 0 Then taDesc = PromptText("Enter top assembly description (TADesc):", "New BOM")
+    If Len(bomNotes) = 0 Then bomNotes = PromptText("Enter BOM notes (optional):", "New BOM")
 
     If Len(taId) = 0 Or Len(taPn) = 0 Or Len(taRev) = 0 Or Len(taDesc) = 0 Then
         MsgBox "BOM creation cancelled. All fields are required.", vbInformation, "New BOM"
         Exit Sub
     End If
 
-    Create_BOM_For_Assembly_FromInputs taId, taPn, taRev, taDesc
+    Create_BOM_For_Assembly_FromInputs taId, taPn, taRev, taDesc, bomNotes
     Exit Sub
 
 EH:
@@ -72,7 +77,8 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
     ByVal taId As String, _
     ByVal taPn As String, _
     ByVal taRev As String, _
-    ByVal taDesc As String)
+    ByVal taDesc As String, _
+    Optional ByVal bomNotes As String = "")
     Const PROC_NAME As String = "M_Data_BOMs_Entry.Create_BOM_For_Assembly_FromInputs"
 
     Const SH_TEMPLATE As String = "BOM_TEMPLATE"
@@ -141,6 +147,7 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 230 taPn = Trim$(taPn)
 240 taRev = Trim$(taRev)
 250 taDesc = Trim$(taDesc)
+255 bomNotes = Trim$(bomNotes)
 
 260 If Len(taId) = 0 Or Len(taPn) = 0 Or Len(taRev) = 0 Or Len(taDesc) = 0 Then
 270     MsgBox "All fields are required (TAID, TAPN, TARev, TADesc).", vbExclamation, "New BOM"
@@ -152,8 +159,8 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 320     GoTo CleanExit
 330 End If
 
-340 If PnRev_Exists_InBomsNotes(loBoms, taPn, taRev) Then
-350     MsgBox "PN/Revision combination already exists in BOMS (via BOM_NOTES scan)." & vbCrLf & _
+340 If PnRev_Exists_InBoms(loBoms, taPn, taRev) Then
+350     MsgBox "PN/Revision combination already exists in BOMS." & vbCrLf & _
                "TAPN=" & taPn & ", TARev=" & taRev, vbExclamation, "New BOM"
 360     GoTo CleanExit
 370 End If
@@ -194,6 +201,9 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 620 newSheetName = BuildUniqueSheetName(wb, BOM_TAB_PREFIX & taId)
 630 wsNew.Name = newSheetName
 
+    ' Populate TA description cell on the new BOM sheet
+635 wsNew.Range("C4").Value = taDesc
+
     ' Rename the copied BOM table
 640 If wsNew.ListObjects.Count < 1 Then Err.Raise vbObjectError + 6202, PROC_NAME, "No table found on copied BOM sheet."
 650 Set loNew = wsNew.ListObjects(1)
@@ -214,7 +224,10 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 720 SetByHeader loBoms, lr, "BOMID", bomId
 730 SetByHeader loBoms, lr, "BOMTab", newSheetName
 740 SetByHeader loBoms, lr, "AssemblyID", taId
-750 SetByHeader loBoms, lr, "BOM_NOTES", "PN=" & taPn & "; Rev=" & taRev & "; Desc=" & taDesc
+750 SetByHeader loBoms, lr, "BOM_NOTES", bomNotes
+755 If ColumnExists(loBoms, "TAPN") Then SetByHeader loBoms, lr, "TAPN", taPn
+756 If ColumnExists(loBoms, "TARev") Then SetByHeader loBoms, lr, "TARev", taRev
+757 If ColumnExists(loBoms, "TADesc") Then SetByHeader loBoms, lr, "TADesc", taDesc
 
 760 If ColumnExists(loBoms, "CreatedAt") Then SetByHeader loBoms, lr, "CreatedAt", createdAt
 770 If ColumnExists(loBoms, "CreatedBy") Then SetByHeader loBoms, lr, "CreatedBy", createdBy
@@ -235,6 +248,7 @@ EH:
         "TAPN=" & taPn & vbCrLf & _
         "TARev=" & taRev & vbCrLf & _
         "TADesc=" & taDesc & vbCrLf & _
+        "BOM_NOTES=" & bomNotes & vbCrLf & _
         "TemplateSheet=" & SH_TEMPLATE & vbCrLf & _
         "BomsSheet=" & SH_BOMS & vbCrLf & _
         "ActiveSheet=" & SafeSheetNameSafe() & vbCrLf & _
@@ -305,30 +319,49 @@ Private Function AssemblyId_Exists(ByVal loBoms As ListObject, ByVal assemblyId 
 1030 Next i
 End Function
 
-Private Function PnRev_Exists_InBomsNotes(ByVal loBoms As ListObject, ByVal pn As String, ByVal rev As String) As Boolean
+Private Function PnRev_Exists_InBoms(ByVal loBoms As ListObject, ByVal pn As String, ByVal rev As String) As Boolean
+    Dim idxPn As Long, idxRev As Long
+    Dim arrPn As Variant, arrRev As Variant
     Dim idx As Long, arr As Variant, i As Long, notes As String
     Dim tokenPn As String, tokenRev As String
 
-    PnRev_Exists_InBomsNotes = False
+    PnRev_Exists_InBoms = False
 1100 If loBoms Is Nothing Then Exit Function
 1110 If loBoms.DataBodyRange Is Nothing Then Exit Function
 
-1120 idx = GetColIndex(loBoms, "BOM_NOTES")
-1130 If idx = 0 Then Exit Function
+    ' Preferred: structured columns if present
+1120 idxPn = GetColIndex(loBoms, "TAPN")
+1130 idxRev = GetColIndex(loBoms, "TARev")
+1140 If idxPn > 0 And idxRev > 0 Then
+1150     arrPn = loBoms.ListColumns(idxPn).DataBodyRange.Value
+1160     arrRev = loBoms.ListColumns(idxRev).DataBodyRange.Value
+1170     For i = 1 To UBound(arrPn, 1)
+1180         If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
+               StrComp(SafeText(arrRev(i, 1)), rev, vbTextCompare) = 0 Then
+1190             PnRev_Exists_InBoms = True
+1200             Exit Function
+1210         End If
+1220     Next i
+1230     Exit Function
+1240 End If
 
-1140 tokenPn = "PN=" & pn & ";"
-1150 tokenRev = "Rev=" & rev & ";"
+    ' Backward-compat fallback: legacy encoded values in BOM_NOTES
+1250 idx = GetColIndex(loBoms, "BOM_NOTES")
+1260 If idx = 0 Then Exit Function
 
-1160 arr = loBoms.ListColumns(idx).DataBodyRange.value
-1170 For i = 1 To UBound(arr, 1)
-1180     notes = SafeText(arr(i, 1))
-1190     If Len(notes) > 0 Then
-1200         If InStr(1, notes, tokenPn, vbTextCompare) > 0 And InStr(1, notes, tokenRev, vbTextCompare) > 0 Then
-1210             PnRev_Exists_InBomsNotes = True
-1220             Exit Function
-1230         End If
-1240     End If
-1250 Next i
+1270 tokenPn = "PN=" & pn & ";"
+1280 tokenRev = "Rev=" & rev & ";"
+
+1290 arr = loBoms.ListColumns(idx).DataBodyRange.Value
+1300 For i = 1 To UBound(arr, 1)
+1310     notes = SafeText(arr(i, 1))
+1320     If Len(notes) > 0 Then
+1330         If InStr(1, notes, tokenPn, vbTextCompare) > 0 And InStr(1, notes, tokenRev, vbTextCompare) > 0 Then
+1340             PnRev_Exists_InBoms = True
+1350             Exit Function
+1360         End If
+1370     End If
+1380 Next i
 End Function
 
 '==========================
