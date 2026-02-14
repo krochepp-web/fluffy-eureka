@@ -245,7 +245,15 @@ CleanExit:
 830 Exit Sub
 
 EH:
-    Debug_Report PROC_NAME, Err, _
+    Dim errNum As Long
+    Dim errDesc As String
+    Dim errLine As Long
+
+    errNum = Err.Number
+    errDesc = Err.Description
+    errLine = Erl
+
+    Debug_Report PROC_NAME, errNum, errDesc, errLine, _
         "TAID=" & taId & vbCrLf & _
         "TAPN=" & taPn & vbCrLf & _
         "TARev=" & taRev & vbCrLf & _
