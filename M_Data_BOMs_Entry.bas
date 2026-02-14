@@ -14,7 +14,7 @@ Option Explicit
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - BOM_TEMPLATE: TBL_BOM_TEMPLATE
-'   - BOMS: TBL_BOMS [BOMID, BOMTab, AssemblyID, BOM_NOTES] + optional [TAPN, TARev, TADesc]
+'   - BOMS: TBL_BOMS [BOMID, BOMTab, TAID, BOM_NOTES, TARev, TADesc] (+ optional TAPN)
 '   - Comps (optional): TBL_COMPS for best-effort TA validation
 '
 ' Outputs:
@@ -139,8 +139,10 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 
 180 RequireColumn loBoms, "BOMID"
 190 RequireColumn loBoms, "BOMTab"
-200 RequireColumn loBoms, "AssemblyID"
+200 RequireColumn loBoms, "TAID"
 210 RequireColumn loBoms, "BOM_NOTES"
+220 RequireColumn loBoms, "TARev"
+230 RequireColumn loBoms, "TADesc"
 
     ' Inputs
 220 taId = Trim$(taId)
@@ -154,8 +156,8 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 280     GoTo CleanExit
 290 End If
 
-300 If AssemblyId_Exists(loBoms, taId) Then
-310     MsgBox "TAID '" & taId & "' already exists in BOMS (AssemblyID). Choose a unique TAID.", vbExclamation, "New BOM"
+300 If TaId_Exists(loBoms, taId) Then
+310     MsgBox "TAID '" & taId & "' already exists in BOMS (TAID). Choose a unique TAID.", vbExclamation, "New BOM"
 320     GoTo CleanExit
 330 End If
 
@@ -223,24 +225,24 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 
 720 SetByHeader loBoms, lr, "BOMID", bomId
 730 SetByHeader loBoms, lr, "BOMTab", newSheetName
-740 SetByHeader loBoms, lr, "AssemblyID", taId
+740 SetByHeader loBoms, lr, "TAID", taId
 750 SetByHeader loBoms, lr, "BOM_NOTES", bomNotes
-755 If ColumnExists(loBoms, "TAPN") Then SetByHeader loBoms, lr, "TAPN", taPn
-756 If ColumnExists(loBoms, "TARev") Then SetByHeader loBoms, lr, "TARev", taRev
-757 If ColumnExists(loBoms, "TADesc") Then SetByHeader loBoms, lr, "TADesc", taDesc
+760 SetByHeader loBoms, lr, "TARev", taRev
+770 SetByHeader loBoms, lr, "TADesc", taDesc
+775 If ColumnExists(loBoms, "TAPN") Then SetByHeader loBoms, lr, "TAPN", taPn
 
-760 If ColumnExists(loBoms, "CreatedAt") Then SetByHeader loBoms, lr, "CreatedAt", createdAt
-770 If ColumnExists(loBoms, "CreatedBy") Then SetByHeader loBoms, lr, "CreatedBy", createdBy
-780 If ColumnExists(loBoms, "UpdatedAt") Then SetByHeader loBoms, lr, "UpdatedAt", createdAt
-790 If ColumnExists(loBoms, "UpdatedBy") Then SetByHeader loBoms, lr, "UpdatedBy", createdBy
+780 If ColumnExists(loBoms, "CreatedAt") Then SetByHeader loBoms, lr, "CreatedAt", createdAt
+790 If ColumnExists(loBoms, "CreatedBy") Then SetByHeader loBoms, lr, "CreatedBy", createdBy
+800 If ColumnExists(loBoms, "UpdatedAt") Then SetByHeader loBoms, lr, "UpdatedAt", createdAt
+810 If ColumnExists(loBoms, "UpdatedBy") Then SetByHeader loBoms, lr, "UpdatedBy", createdBy
 
-800 MsgBox "New BOM created: " & bomId & vbCrLf & _
+820 MsgBox "New BOM created: " & bomId & vbCrLf & _
           "Sheet: " & newSheetName & vbCrLf & _
           "TAID: " & taId & vbCrLf & _
           "PN/Rev: " & taPn & " / " & taRev, vbInformation, "New BOM"
 
 CleanExit:
-810 Exit Sub
+830 Exit Sub
 
 EH:
     Debug_Report PROC_NAME, Err, _
@@ -297,22 +299,22 @@ End Function
 '==========================
 ' Uniqueness checks
 '==========================
-Private Function AssemblyId_Exists(ByVal loBoms As ListObject, ByVal assemblyId As String) As Boolean
+Private Function TaId_Exists(ByVal loBoms As ListObject, ByVal taId As String) As Boolean
     Dim idx As Long, arr As Variant, i As Long, s As String
-    AssemblyId_Exists = False
+    TaId_Exists = False
 
 900 If loBoms Is Nothing Then Exit Function
 910 If loBoms.DataBodyRange Is Nothing Then Exit Function
 
-920 idx = GetColIndex(loBoms, "AssemblyID")
+920 idx = GetColIndex(loBoms, "TAID")
 930 If idx = 0 Then Exit Function
 
 940 arr = loBoms.ListColumns(idx).DataBodyRange.value
 950 For i = 1 To UBound(arr, 1)
 960     s = SafeText(arr(i, 1))
 970     If Len(s) > 0 Then
-980         If StrComp(s, assemblyId, vbTextCompare) = 0 Then
-990             AssemblyId_Exists = True
+980         If StrComp(s, taId, vbTextCompare) = 0 Then
+990             TaId_Exists = True
 1000            Exit Function
 1010        End If
 1020    End If
