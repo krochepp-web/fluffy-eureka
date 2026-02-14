@@ -35,6 +35,7 @@ Option Explicit
 Private Const VB_COMP_STD_MODULE As Long = 1
 Private Const VB_COMP_CLASS_MODULE As Long = 2
 Private Const DIALOG_FOLDER_PICKER As Long = 4
+Private Const THIS_IMPORT_MODULE As String = "Dev_ImportExportVBAModules"
 
 '========================
 ' Public entry points
@@ -165,6 +166,11 @@ Public Sub Import_All_BAS_Modules_FromFolder()
         If Len(moduleName) = 0 Then moduleName = Left$(fileName, Len(fileName) - 4)
 
         On Error GoTo ImportFail
+
+        If StrComp(moduleName, THIS_IMPORT_MODULE, vbTextCompare) = 0 Then
+            Debug.Print "SKIP: " & moduleName & " (importer module cannot safely re-import itself while running)"
+            GoTo ContinueNext
+        End If
 
         RemoveStandardModuleIfExists moduleName, vbComp
 
