@@ -222,6 +222,9 @@ Set loNew = wsNew.ListObjects(1)
 newTableName = BuildUniqueTableName(wb, "TBL_BOM_" & NormalizeName(taId))
 loNew.Name = newTableName
 
+    ' Populate TA Description field on new BOM sheet
+675 wsNew.Range("C4").value = taDesc
+
     ' Register in BOMS table
 Dim lr As ListRow
 Set lr = loBoms.ListRows.Add
