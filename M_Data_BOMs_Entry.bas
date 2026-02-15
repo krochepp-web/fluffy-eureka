@@ -317,7 +317,9 @@ End Function
 ' Uniqueness checks
 '==========================
 Private Function TaId_Exists(ByVal loBoms As ListObject, ByVal taId As String) As Boolean
-    Dim idx As Long, arr As Variant, i As Long, s As String
+    Dim idx As Long
+    Dim rngTaId As Range
+    Dim i As Long, s As String
     TaId_Exists = False
 
 If loBoms Is Nothing Then Exit Function
@@ -326,9 +328,9 @@ If loBoms.DataBodyRange Is Nothing Then Exit Function
 idx = GetColIndex(loBoms, "TAID")
 If idx = 0 Then Exit Function
 
-arr = loBoms.ListColumns(idx).DataBodyRange.value
-For i = 1 To UBound(arr, 1)
-s = SafeText(arr(i, 1))
+Set rngTaId = loBoms.ListColumns(idx).DataBodyRange
+For i = 1 To rngTaId.Rows.Count
+s = SafeText(rngTaId.Cells(i, 1).Value)
 If Len(s) > 0 Then
 If StrComp(s, taId, vbTextCompare) = 0 Then
 TaId_Exists = True
@@ -340,8 +342,9 @@ End Function
 
 Private Function PnRev_Exists_InBoms(ByVal loBoms As ListObject, ByVal pn As String, ByVal rev As String) As Boolean
     Dim idxPn As Long, idxRev As Long
-    Dim arrPn As Variant, arrRev As Variant
-    Dim idx As Long, arr As Variant, i As Long, notes As String
+    Dim rngPn As Range, rngRev As Range
+    Dim idx As Long, i As Long, notes As String
+    Dim rngNotes As Range
     Dim tokenPn As String, tokenRev As String
 
     PnRev_Exists_InBoms = False
@@ -352,11 +355,11 @@ If loBoms.DataBodyRange Is Nothing Then Exit Function
 idxPn = GetColIndex(loBoms, "TAPN")
 idxRev = GetColIndex(loBoms, "TARev")
 If idxPn > 0 And idxRev > 0 Then
-arrPn = loBoms.ListColumns(idxPn).DataBodyRange.Value
-arrRev = loBoms.ListColumns(idxRev).DataBodyRange.Value
-For i = 1 To UBound(arrPn, 1)
-If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
-               StrComp(SafeText(arrRev(i, 1)), rev, vbTextCompare) = 0 Then
+Set rngPn = loBoms.ListColumns(idxPn).DataBodyRange
+Set rngRev = loBoms.ListColumns(idxRev).DataBodyRange
+For i = 1 To rngPn.Rows.Count
+If StrComp(SafeText(rngPn.Cells(i, 1).Value), pn, vbTextCompare) = 0 And _
+               StrComp(SafeText(rngRev.Cells(i, 1).Value), rev, vbTextCompare) = 0 Then
 PnRev_Exists_InBoms = True
 Exit Function
 End If
@@ -371,9 +374,9 @@ If idx = 0 Then Exit Function
 tokenPn = "PN=" & pn & ";"
 tokenRev = "Rev=" & rev & ";"
 
-arr = loBoms.ListColumns(idx).DataBodyRange.Value
-For i = 1 To UBound(arr, 1)
-notes = SafeText(arr(i, 1))
+Set rngNotes = loBoms.ListColumns(idx).DataBodyRange
+For i = 1 To rngNotes.Rows.Count
+notes = SafeText(rngNotes.Cells(i, 1).Value)
 If Len(notes) > 0 Then
 If InStr(1, notes, tokenPn, vbTextCompare) > 0 And InStr(1, notes, tokenRev, vbTextCompare) > 0 Then
 PnRev_Exists_InBoms = True
@@ -388,7 +391,7 @@ End Function
 '==========================
 Private Function Comps_FindByCompId(ByVal loComps As ListObject, ByVal compId As String, ByVal ourPnIn As String, ByVal ourRevIn As String, ByRef revStatusOut As String) As Boolean
     Dim idxId As Long, idxPn As Long, idxRev As Long, idxRS As Long
-    Dim arrId As Variant, arrPn As Variant, arrRev As Variant, arrRS As Variant
+    Dim rngId As Range, rngPn As Range, rngRev As Range, rngRS As Range
     Dim i As Long
 
     Comps_FindByCompId = False
@@ -404,22 +407,22 @@ idxRS = GetColIndex(loComps, "RevStatus") 'may be 0
 
 If idxId = 0 Or idxPn = 0 Or idxRev = 0 Then Exit Function
 
-arrId = loComps.ListColumns(idxId).DataBodyRange.value
-arrPn = loComps.ListColumns(idxPn).DataBodyRange.value
-arrRev = loComps.ListColumns(idxRev).DataBodyRange.value
-If idxRS > 0 Then arrRS = loComps.ListColumns(idxRS).DataBodyRange.value
+Set rngId = loComps.ListColumns(idxId).DataBodyRange
+Set rngPn = loComps.ListColumns(idxPn).DataBodyRange
+Set rngRev = loComps.ListColumns(idxRev).DataBodyRange
+If idxRS > 0 Then Set rngRS = loComps.ListColumns(idxRS).DataBodyRange
 
-For i = 1 To UBound(arrId, 1)
-If StrComp(SafeText(arrId(i, 1)), compId, vbTextCompare) = 0 Then
-If StrComp(SafeText(arrPn(i, 1)), ourPnIn, vbTextCompare) <> 0 Or _
-               StrComp(SafeText(arrRev(i, 1)), ourRevIn, vbTextCompare) <> 0 Then
+For i = 1 To rngId.Rows.Count
+If StrComp(SafeText(rngId.Cells(i, 1).Value), compId, vbTextCompare) = 0 Then
+If StrComp(SafeText(rngPn.Cells(i, 1).Value), ourPnIn, vbTextCompare) <> 0 Or _
+               StrComp(SafeText(rngRev.Cells(i, 1).Value), ourRevIn, vbTextCompare) <> 0 Then
 MsgBox "TAID exists in Comps but PN/Rev does not match your input." & vbCrLf & _
-                       "Comps says: " & SafeText(arrPn(i, 1)) & " / " & SafeText(arrRev(i, 1)) & vbCrLf & _
+                       "Comps says: " & SafeText(rngPn.Cells(i, 1).Value) & " / " & SafeText(rngRev.Cells(i, 1).Value) & vbCrLf & _
                        "You entered: " & ourPnIn & " / " & ourRevIn, vbExclamation, "New BOM"
 Exit Function
 End If
 
-If idxRS > 0 Then revStatusOut = SafeText(arrRS(i, 1))
+If idxRS > 0 Then revStatusOut = SafeText(rngRS.Cells(i, 1).Value)
 Comps_FindByCompId = True
 Exit Function
 End If
@@ -559,7 +562,7 @@ End Sub
 '==========================
 Private Function GenerateNextId(ByVal lo As ListObject, ByVal header As String, ByVal prefix As String, ByVal padDigits As Long) As String
     Dim idx As Long, maxN As Long
-    Dim arr As Variant
+    Dim rngId As Range
     Dim i As Long, s As String, n As Long
 
     GenerateNextId = vbNullString
@@ -568,9 +571,9 @@ If idx = 0 Then Exit Function
 
 maxN = 0
 If Not lo.DataBodyRange Is Nothing Then
-arr = lo.ListColumns(idx).DataBodyRange.value
-For i = 1 To UBound(arr, 1)
-s = SafeText(arr(i, 1))
+Set rngId = lo.ListColumns(idx).DataBodyRange
+For i = 1 To rngId.Rows.Count
+s = SafeText(rngId.Cells(i, 1).Value)
 If Len(s) > 0 Then
 n = TrailingNumber(s)
 If n > maxN Then maxN = n
