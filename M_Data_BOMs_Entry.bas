@@ -141,8 +141,7 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 190 RequireColumn loBoms, "BOMTab"
 200 RequireColumn loBoms, "TAID"
 210 RequireColumn loBoms, "BOM_NOTES"
-220 RequireColumn loBoms, "TARev"
-230 RequireColumn loBoms, "TADesc"
+220 ' TARev and TADesc are optional in legacy workbooks
 
     ' Inputs
 235 taId = Trim$(taId)
@@ -227,8 +226,8 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 730 SetByHeader loBoms, lr, "BOMTab", newSheetName
 740 SetByHeader loBoms, lr, "TAID", taId
 750 SetByHeader loBoms, lr, "BOM_NOTES", bomNotes
-760 SetByHeader loBoms, lr, "TARev", taRev
-770 SetByHeader loBoms, lr, "TADesc", taDesc
+760 If ColumnExists(loBoms, "TARev") Then SetByHeader loBoms, lr, "TARev", taRev
+770 If ColumnExists(loBoms, "TADesc") Then SetByHeader loBoms, lr, "TADesc", taDesc
 775 If ColumnExists(loBoms, "TAPN") Then SetByHeader loBoms, lr, "TAPN", taPn
 
 780 If ColumnExists(loBoms, "CreatedAt") Then SetByHeader loBoms, lr, "CreatedAt", createdAt
