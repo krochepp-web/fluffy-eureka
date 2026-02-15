@@ -212,9 +212,6 @@ GoTo CleanExit
 End If
 wsNew.Name = newSheetName
 
-    ' Populate TA description cell on the new BOM sheet
-wsNew.Range("C4").Value = taDesc
-
     ' Rename the copied BOM table
 If wsNew.ListObjects.Count < 1 Then Err.Raise vbObjectError + 6202, PROC_NAME, "No table found on copied BOM sheet."
 Set loNew = wsNew.ListObjects(1)
@@ -222,8 +219,11 @@ Set loNew = wsNew.ListObjects(1)
 newTableName = BuildUniqueTableName(wb, "TBL_BOM_" & NormalizeName(taId))
 loNew.Name = newTableName
 
-    ' Populate TA Description field on new BOM sheet
-675 wsNew.Range("C4").value = taDesc
+    ' Populate TA header fields on new BOM sheet
+wsNew.Range("C1").Value = taId
+wsNew.Range("C2").Value = taPn
+wsNew.Range("C3").Value = taRev
+wsNew.Range("C4").Value = taDesc
 
     ' Register in BOMS table
 Dim lr As ListRow
@@ -317,9 +317,7 @@ End Function
 ' Uniqueness checks
 '==========================
 Private Function TaId_Exists(ByVal loBoms As ListObject, ByVal taId As String) As Boolean
-    Dim idx As Long
-    Dim rngTaId As Range
-    Dim i As Long, s As String
+    Dim idx As Long, arr As Variant, i As Long, s As String, rowCount As Long
     TaId_Exists = False
 
 If loBoms Is Nothing Then Exit Function
@@ -328,9 +326,10 @@ If loBoms.DataBodyRange Is Nothing Then Exit Function
 idx = GetColIndex(loBoms, "TAID")
 If idx = 0 Then Exit Function
 
-Set rngTaId = loBoms.ListColumns(idx).DataBodyRange
-For i = 1 To rngTaId.Rows.Count
-s = SafeText(rngTaId.Cells(i, 1).Value)
+arr = loBoms.ListColumns(idx).DataBodyRange.value
+rowCount = ColumnDataRowCount(arr)
+For i = 1 To rowCount
+s = SafeText(ColumnDataItem(arr, i))
 If Len(s) > 0 Then
 If StrComp(s, taId, vbTextCompare) = 0 Then
 TaId_Exists = True
@@ -342,9 +341,9 @@ End Function
 
 Private Function PnRev_Exists_InBoms(ByVal loBoms As ListObject, ByVal pn As String, ByVal rev As String) As Boolean
     Dim idxPn As Long, idxRev As Long
-    Dim rngPn As Range, rngRev As Range
-    Dim idx As Long, i As Long, notes As String
-    Dim rngNotes As Range
+    Dim arrPn As Variant, arrRev As Variant
+    Dim idx As Long, arr As Variant, i As Long, notes As String
+    Dim rowCount As Long
     Dim tokenPn As String, tokenRev As String
 
     PnRev_Exists_InBoms = False
@@ -355,11 +354,12 @@ If loBoms.DataBodyRange Is Nothing Then Exit Function
 idxPn = GetColIndex(loBoms, "TAPN")
 idxRev = GetColIndex(loBoms, "TARev")
 If idxPn > 0 And idxRev > 0 Then
-Set rngPn = loBoms.ListColumns(idxPn).DataBodyRange
-Set rngRev = loBoms.ListColumns(idxRev).DataBodyRange
-For i = 1 To rngPn.Rows.Count
-If StrComp(SafeText(rngPn.Cells(i, 1).Value), pn, vbTextCompare) = 0 And _
-               StrComp(SafeText(rngRev.Cells(i, 1).Value), rev, vbTextCompare) = 0 Then
+arrPn = loBoms.ListColumns(idxPn).DataBodyRange.Value
+arrRev = loBoms.ListColumns(idxRev).DataBodyRange.Value
+rowCount = ColumnDataRowCount(arrPn)
+For i = 1 To rowCount
+If StrComp(SafeText(ColumnDataItem(arrPn, i)), pn, vbTextCompare) = 0 And _
+               StrComp(SafeText(ColumnDataItem(arrRev, i)), rev, vbTextCompare) = 0 Then
 PnRev_Exists_InBoms = True
 Exit Function
 End If
@@ -374,9 +374,10 @@ If idx = 0 Then Exit Function
 tokenPn = "PN=" & pn & ";"
 tokenRev = "Rev=" & rev & ";"
 
-Set rngNotes = loBoms.ListColumns(idx).DataBodyRange
-For i = 1 To rngNotes.Rows.Count
-notes = SafeText(rngNotes.Cells(i, 1).Value)
+arr = loBoms.ListColumns(idx).DataBodyRange.Value
+rowCount = ColumnDataRowCount(arr)
+For i = 1 To rowCount
+notes = SafeText(ColumnDataItem(arr, i))
 If Len(notes) > 0 Then
 If InStr(1, notes, tokenPn, vbTextCompare) > 0 And InStr(1, notes, tokenRev, vbTextCompare) > 0 Then
 PnRev_Exists_InBoms = True
@@ -391,8 +392,8 @@ End Function
 '==========================
 Private Function Comps_FindByCompId(ByVal loComps As ListObject, ByVal compId As String, ByVal ourPnIn As String, ByVal ourRevIn As String, ByRef revStatusOut As String) As Boolean
     Dim idxId As Long, idxPn As Long, idxRev As Long, idxRS As Long
-    Dim rngId As Range, rngPn As Range, rngRev As Range, rngRS As Range
-    Dim i As Long
+    Dim arrId As Variant, arrPn As Variant, arrRev As Variant, arrRS As Variant
+    Dim i As Long, rowCount As Long
 
     Comps_FindByCompId = False
     revStatusOut = vbNullString
@@ -412,17 +413,18 @@ Set rngPn = loComps.ListColumns(idxPn).DataBodyRange
 Set rngRev = loComps.ListColumns(idxRev).DataBodyRange
 If idxRS > 0 Then Set rngRS = loComps.ListColumns(idxRS).DataBodyRange
 
-For i = 1 To rngId.Rows.Count
-If StrComp(SafeText(rngId.Cells(i, 1).Value), compId, vbTextCompare) = 0 Then
-If StrComp(SafeText(rngPn.Cells(i, 1).Value), ourPnIn, vbTextCompare) <> 0 Or _
-               StrComp(SafeText(rngRev.Cells(i, 1).Value), ourRevIn, vbTextCompare) <> 0 Then
+rowCount = ColumnDataRowCount(arrId)
+For i = 1 To rowCount
+If StrComp(SafeText(ColumnDataItem(arrId, i)), compId, vbTextCompare) = 0 Then
+If StrComp(SafeText(ColumnDataItem(arrPn, i)), ourPnIn, vbTextCompare) <> 0 Or _
+               StrComp(SafeText(ColumnDataItem(arrRev, i)), ourRevIn, vbTextCompare) <> 0 Then
 MsgBox "TAID exists in Comps but PN/Rev does not match your input." & vbCrLf & _
-                       "Comps says: " & SafeText(rngPn.Cells(i, 1).Value) & " / " & SafeText(rngRev.Cells(i, 1).Value) & vbCrLf & _
+                       "Comps says: " & SafeText(ColumnDataItem(arrPn, i)) & " / " & SafeText(ColumnDataItem(arrRev, i)) & vbCrLf & _
                        "You entered: " & ourPnIn & " / " & ourRevIn, vbExclamation, "New BOM"
 Exit Function
 End If
 
-If idxRS > 0 Then revStatusOut = SafeText(rngRS.Cells(i, 1).Value)
+If idxRS > 0 Then revStatusOut = SafeText(ColumnDataItem(arrRS, i))
 Comps_FindByCompId = True
 Exit Function
 End If
@@ -562,8 +564,8 @@ End Sub
 '==========================
 Private Function GenerateNextId(ByVal lo As ListObject, ByVal header As String, ByVal prefix As String, ByVal padDigits As Long) As String
     Dim idx As Long, maxN As Long
-    Dim rngId As Range
-    Dim i As Long, s As String, n As Long
+    Dim arr As Variant
+    Dim i As Long, s As String, n As Long, rowCount As Long
 
     GenerateNextId = vbNullString
 idx = GetColIndex(lo, header)
@@ -571,9 +573,10 @@ If idx = 0 Then Exit Function
 
 maxN = 0
 If Not lo.DataBodyRange Is Nothing Then
-Set rngId = lo.ListColumns(idx).DataBodyRange
-For i = 1 To rngId.Rows.Count
-s = SafeText(rngId.Cells(i, 1).Value)
+arr = lo.ListColumns(idx).DataBodyRange.value
+rowCount = ColumnDataRowCount(arr)
+For i = 1 To rowCount
+s = SafeText(ColumnDataItem(arr, i))
 If Len(s) > 0 Then
 n = TrailingNumber(s)
 If n > maxN Then maxN = n
@@ -582,6 +585,35 @@ Next i
 End If
 
 GenerateNextId = prefix & Right$(String$(padDigits, "0") & CStr(maxN + 1), padDigits)
+End Function
+
+Private Function ColumnDataRowCount(ByVal arr As Variant) As Long
+    On Error GoTo EH
+    If IsArray(arr) Then
+        ColumnDataRowCount = UBound(arr, 1) - LBound(arr, 1) + 1
+    ElseIf IsEmpty(arr) Then
+        ColumnDataRowCount = 0
+    Else
+        ColumnDataRowCount = 1
+    End If
+    Exit Function
+EH:
+    ColumnDataRowCount = 0
+End Function
+
+Private Function ColumnDataItem(ByVal arr As Variant, ByVal rowIndex As Long) As Variant
+    If rowIndex < 1 Then
+        ColumnDataItem = Empty
+        Exit Function
+    End If
+
+    If IsArray(arr) Then
+        ColumnDataItem = arr(LBound(arr, 1) + rowIndex - 1, LBound(arr, 2))
+    ElseIf rowIndex = 1 Then
+        ColumnDataItem = arr
+    Else
+        ColumnDataItem = Empty
+    End If
 End Function
 
 Private Function TrailingNumber(ByVal s As String) As Long
