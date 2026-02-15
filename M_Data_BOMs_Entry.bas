@@ -408,10 +408,10 @@ idxRS = GetColIndex(loComps, "RevStatus") 'may be 0
 
 If idxId = 0 Or idxPn = 0 Or idxRev = 0 Then Exit Function
 
-Set rngId = loComps.ListColumns(idxId).DataBodyRange
-Set rngPn = loComps.ListColumns(idxPn).DataBodyRange
-Set rngRev = loComps.ListColumns(idxRev).DataBodyRange
-If idxRS > 0 Then Set rngRS = loComps.ListColumns(idxRS).DataBodyRange
+arrId = loComps.ListColumns(idxId).DataBodyRange.Value
+arrPn = loComps.ListColumns(idxPn).DataBodyRange.Value
+arrRev = loComps.ListColumns(idxRev).DataBodyRange.Value
+If idxRS > 0 Then arrRS = loComps.ListColumns(idxRS).DataBodyRange.Value
 
 rowCount = ColumnDataRowCount(arrId)
 For i = 1 To rowCount
