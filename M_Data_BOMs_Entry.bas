@@ -14,7 +14,7 @@ Option Explicit
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - BOM_TEMPLATE: TBL_BOM_TEMPLATE
-'   - BOMS: TBL_BOMS [BOMID, BOMTab, TAID, BOM_NOTES, TARev, TADesc] (+ optional TAPN)
+'   - BOMS: TBL_BOMS [BOMID, BOMTab, TAID, BOM_NOTES] (+ optional TAPN, TARev, TADesc)
 '   - Comps (optional): TBL_COMPS for best-effort TA validation
 '
 ' Outputs:
@@ -115,146 +115,143 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 
     On Error GoTo EH
 
-10  If Not GateReady_Safe(True) Then GoTo CleanExit
+If Not GateReady_Safe(True) Then GoTo CleanExit
 
-20  Set wb = ThisWorkbook
-30  Set wsTemplate = wb.Worksheets(SH_TEMPLATE)
-40  Set wsBoms = wb.Worksheets(SH_BOMS)
+Set wb = ThisWorkbook
+Set wsTemplate = wb.Worksheets(SH_TEMPLATE)
+Set wsBoms = wb.Worksheets(SH_BOMS)
 
-50  Set loTemplate = wsTemplate.ListObjects(LO_TEMPLATE)
-60  Set loBoms = wsBoms.ListObjects(LO_BOMS)
+Set loTemplate = wsTemplate.ListObjects(LO_TEMPLATE)
+Set loBoms = wsBoms.ListObjects(LO_BOMS)
 
     ' Required headers
-70  RequireColumn loTemplate, "CompID"
-80  RequireColumn loTemplate, "OurPN"
-90  RequireColumn loTemplate, "OurRev"
-100 RequireColumn loTemplate, "Description"
-110 RequireColumn loTemplate, "UOM"
-120 RequireColumn loTemplate, "QtyPer"
-130 RequireColumn loTemplate, "CompNotes"
-140 RequireColumn loTemplate, "CreatedAt"
-150 RequireColumn loTemplate, "CreatedBy"
-160 RequireColumn loTemplate, "UpdatedAt"
-170 RequireColumn loTemplate, "UpdatedBy"
+RequireColumn loTemplate, "CompID"
+RequireColumn loTemplate, "OurPN"
+RequireColumn loTemplate, "OurRev"
+RequireColumn loTemplate, "Description"
+RequireColumn loTemplate, "UOM"
+RequireColumn loTemplate, "QtyPer"
+RequireColumn loTemplate, "CompNotes"
+RequireColumn loTemplate, "CreatedAt"
+RequireColumn loTemplate, "CreatedBy"
+RequireColumn loTemplate, "UpdatedAt"
+RequireColumn loTemplate, "UpdatedBy"
 
-180 RequireColumn loBoms, "BOMID"
-190 RequireColumn loBoms, "BOMTab"
-200 RequireColumn loBoms, "TAID"
-210 RequireColumn loBoms, "BOM_NOTES"
-220 ' TARev and TADesc are optional in legacy workbooks
+RequireColumn loBoms, "BOMID"
+RequireColumn loBoms, "BOMTab"
+RequireColumn loBoms, "TAID"
+RequireColumn loBoms, "BOM_NOTES"
+' TARev and TADesc are optional in legacy workbooks
 
     ' Inputs
-235 taId = Trim$(taId)
-236 taPn = Trim$(taPn)
-240 taRev = Trim$(taRev)
-250 taDesc = Trim$(taDesc)
-255 bomNotes = Trim$(bomNotes)
+taId = Trim$(taId)
+taPn = Trim$(taPn)
+taRev = Trim$(taRev)
+taDesc = Trim$(taDesc)
+bomNotes = Trim$(bomNotes)
 
-260 If Len(taId) = 0 Or Len(taPn) = 0 Or Len(taRev) = 0 Or Len(taDesc) = 0 Then
-270     MsgBox "All fields are required (TAID, TAPN, TARev, TADesc).", vbExclamation, "New BOM"
-280     GoTo CleanExit
-290 End If
+If Len(taId) = 0 Or Len(taPn) = 0 Or Len(taRev) = 0 Or Len(taDesc) = 0 Then
+MsgBox "All fields are required (TAID, TAPN, TARev, TADesc).", vbExclamation, "New BOM"
+GoTo CleanExit
+End If
 
-300 If TaId_Exists(loBoms, taId) Then
-310     MsgBox "TAID '" & taId & "' already exists in BOMS (TAID). Choose a unique TAID.", vbExclamation, "New BOM"
-320     GoTo CleanExit
-330 End If
+If TaId_Exists(loBoms, taId) Then
+MsgBox "TAID '" & taId & "' already exists in BOMS (TAID). Choose a unique TAID.", vbExclamation, "New BOM"
+GoTo CleanExit
+End If
 
-340 If PnRev_Exists_InBoms(loBoms, taPn, taRev) Then
-350     MsgBox "PN/Revision combination already exists in BOMS." & vbCrLf & _
+If PnRev_Exists_InBoms(loBoms, taPn, taRev) Then
+MsgBox "PN/Revision combination already exists in BOMS." & vbCrLf & _
                "TAPN=" & taPn & ", TARev=" & taRev, vbExclamation, "New BOM"
-360     GoTo CleanExit
-370 End If
+GoTo CleanExit
+End If
 
     ' Optional Comps validation (best-effort)
-380 Set loComps = Nothing
-390 On Error Resume Next
-400 Set wsComps = wb.Worksheets(SH_COMPS)
-410 If Not wsComps Is Nothing Then Set loComps = wsComps.ListObjects(LO_COMPS)
-420 On Error GoTo EH
+Set loComps = Nothing
+On Error Resume Next
+Set wsComps = wb.Worksheets(SH_COMPS)
+If Not wsComps Is Nothing Then Set loComps = wsComps.ListObjects(LO_COMPS)
+On Error GoTo EH
 
-430 If Not loComps Is Nothing Then
-440     If ColumnExists(loComps, "CompID") And ColumnExists(loComps, "OurPN") And ColumnExists(loComps, "OurRev") Then
-450         Dim foundTop As Boolean
-460         Dim topRevStatus As String
-470         foundTop = Comps_FindByCompId(loComps, taId, taPn, taRev, topRevStatus)
+If Not loComps Is Nothing Then
+If ColumnExists(loComps, "CompID") And ColumnExists(loComps, "OurPN") And ColumnExists(loComps, "OurRev") Then
+Dim foundTop As Boolean
+Dim topRevStatus As String
+foundTop = Comps_FindByCompId(loComps, taId, taPn, taRev, topRevStatus)
 
-480         If foundTop Then
-490             If ColumnExists(loComps, "RevStatus") Then
-500                 If StrComp(Trim$(topRevStatus), ACTIVE_REVSTATUS, vbTextCompare) <> 0 Then
-510                     MsgBox "Top assembly exists in Comps but RevStatus is not '" & ACTIVE_REVSTATUS & "'." & vbCrLf & _
+If foundTop Then
+If ColumnExists(loComps, "RevStatus") Then
+If StrComp(Trim$(topRevStatus), ACTIVE_REVSTATUS, vbTextCompare) <> 0 Then
+MsgBox "Top assembly exists in Comps but RevStatus is not '" & ACTIVE_REVSTATUS & "'." & vbCrLf & _
                            "TAID=" & taId & ", RevStatus=" & topRevStatus, vbExclamation, "New BOM"
-520                     GoTo CleanExit
-530                 End If
-540             End If
-550         End If
-560     End If
-570 End If
+GoTo CleanExit
+End If
+End If
+End If
+End If
+End If
 
     ' Generate BOMID
-580 bomId = GenerateNextId(loBoms, "BOMID", BOM_ID_PREFIX, BOM_ID_PAD)
-590 If Len(bomId) = 0 Then Err.Raise vbObjectError + 6100, PROC_NAME, "Failed to generate BOMID."
+bomId = GenerateNextId(loBoms, "BOMID", BOM_ID_PREFIX, BOM_ID_PAD)
+If Len(bomId) = 0 Then Err.Raise vbObjectError + 6100, PROC_NAME, "Failed to generate BOMID."
 
     ' Copy template sheet
-600 wsTemplate.Copy After:=wb.Sheets(wb.Sheets.Count)
-610 Set wsNew = wb.Worksheets(wb.Worksheets.Count)
+wsTemplate.Copy After:=wb.Sheets(wb.Sheets.Count)
+Set wsNew = wb.Worksheets(wb.Worksheets.Count)
 
-620 newSheetName = BOM_TAB_PREFIX & taId
-625 If StrComp(NormalizeSheetName(newSheetName), newSheetName, vbBinaryCompare) <> 0 Then
-626     MsgBox "TAID contains characters that cannot be used in BOM tab names." & vbCrLf & _
+newSheetName = BOM_TAB_PREFIX & taId
+If StrComp(NormalizeSheetName(newSheetName), newSheetName, vbBinaryCompare) <> 0 Then
+MsgBox "TAID contains characters that cannot be used in BOM tab names." & vbCrLf & _
                "TAID=" & taId, vbExclamation, "New BOM"
-627     GoTo CleanExit
-628 End If
-629 If WorksheetExists(wb, newSheetName) Then
-630     MsgBox "A BOM tab named " & newSheetName & " already exists. TAID must map 1:1 to tab name." & vbCrLf & _
+GoTo CleanExit
+End If
+If WorksheetExists(wb, newSheetName) Then
+MsgBox "A BOM tab named " & newSheetName & " already exists. TAID must map 1:1 to tab name." & vbCrLf & _
                "Choose a different TAID.", vbExclamation, "New BOM"
-631     GoTo CleanExit
-632 End If
-633 wsNew.Name = newSheetName
+GoTo CleanExit
+End If
+wsNew.Name = newSheetName
 
     ' Populate TA description cell on the new BOM sheet
-635 wsNew.Range("C4").Value = taDesc
-
-    ' Populate TA description cell on the new BOM sheet
-635 wsNew.Range("C4").Value = taDesc
+wsNew.Range("C4").Value = taDesc
 
     ' Rename the copied BOM table
-640 If wsNew.ListObjects.Count < 1 Then Err.Raise vbObjectError + 6202, PROC_NAME, "No table found on copied BOM sheet."
-650 Set loNew = wsNew.ListObjects(1)
+If wsNew.ListObjects.Count < 1 Then Err.Raise vbObjectError + 6202, PROC_NAME, "No table found on copied BOM sheet."
+Set loNew = wsNew.ListObjects(1)
 
-660 newTableName = BuildUniqueTableName(wb, "TBL_BOM_" & NormalizeName(taId))
-670 loNew.Name = newTableName
+newTableName = BuildUniqueTableName(wb, "TBL_BOM_" & NormalizeName(taId))
+loNew.Name = newTableName
 
     ' Populate TA Description field on new BOM sheet
 675 wsNew.Range("C4").value = taDesc
 
     ' Register in BOMS table
-680 Dim lr As ListRow
-690 Set lr = loBoms.ListRows.Add
+Dim lr As ListRow
+Set lr = loBoms.ListRows.Add
 
-700 createdAt = Now
-710 createdBy = GetUserNameSafe()
+createdAt = Now
+createdBy = GetUserNameSafe()
 
-720 SetByHeader loBoms, lr, "BOMID", bomId
-730 SetByHeader loBoms, lr, "BOMTab", newSheetName
-740 SetByHeader loBoms, lr, "TAID", taId
-750 SetByHeader loBoms, lr, "BOM_NOTES", bomNotes
-760 If ColumnExists(loBoms, "TARev") Then SetByHeader loBoms, lr, "TARev", taRev
-770 If ColumnExists(loBoms, "TADesc") Then SetByHeader loBoms, lr, "TADesc", taDesc
-775 If ColumnExists(loBoms, "TAPN") Then SetByHeader loBoms, lr, "TAPN", taPn
+SetByHeader loBoms, lr, "BOMID", bomId
+SetByHeader loBoms, lr, "BOMTab", newSheetName
+SetByHeader loBoms, lr, "TAID", taId
+SetByHeader loBoms, lr, "BOM_NOTES", bomNotes
+If ColumnExists(loBoms, "TARev") Then SetByHeader loBoms, lr, "TARev", taRev
+If ColumnExists(loBoms, "TADesc") Then SetByHeader loBoms, lr, "TADesc", taDesc
+If ColumnExists(loBoms, "TAPN") Then SetByHeader loBoms, lr, "TAPN", taPn
 
-780 If ColumnExists(loBoms, "CreatedAt") Then SetByHeader loBoms, lr, "CreatedAt", createdAt
-790 If ColumnExists(loBoms, "CreatedBy") Then SetByHeader loBoms, lr, "CreatedBy", createdBy
-800 If ColumnExists(loBoms, "UpdatedAt") Then SetByHeader loBoms, lr, "UpdatedAt", createdAt
-810 If ColumnExists(loBoms, "UpdatedBy") Then SetByHeader loBoms, lr, "UpdatedBy", createdBy
+If ColumnExists(loBoms, "CreatedAt") Then SetByHeader loBoms, lr, "CreatedAt", createdAt
+If ColumnExists(loBoms, "CreatedBy") Then SetByHeader loBoms, lr, "CreatedBy", createdBy
+If ColumnExists(loBoms, "UpdatedAt") Then SetByHeader loBoms, lr, "UpdatedAt", createdAt
+If ColumnExists(loBoms, "UpdatedBy") Then SetByHeader loBoms, lr, "UpdatedBy", createdBy
 
-820 MsgBox "New BOM created: " & bomId & vbCrLf & _
+MsgBox "New BOM created: " & bomId & vbCrLf & _
           "Sheet: " & newSheetName & vbCrLf & _
           "TAID: " & taId & vbCrLf & _
           "PN/Rev: " & taPn & " / " & taRev, vbInformation, "New BOM"
 
 CleanExit:
-830 Exit Sub
+Exit Sub
 
 EH:
     Dim errNum As Long
@@ -323,22 +320,22 @@ Private Function TaId_Exists(ByVal loBoms As ListObject, ByVal taId As String) A
     Dim idx As Long, arr As Variant, i As Long, s As String
     TaId_Exists = False
 
-900 If loBoms Is Nothing Then Exit Function
-910 If loBoms.DataBodyRange Is Nothing Then Exit Function
+If loBoms Is Nothing Then Exit Function
+If loBoms.DataBodyRange Is Nothing Then Exit Function
 
-920 idx = GetColIndex(loBoms, "TAID")
-930 If idx = 0 Then Exit Function
+idx = GetColIndex(loBoms, "TAID")
+If idx = 0 Then Exit Function
 
-940 arr = loBoms.ListColumns(idx).DataBodyRange.value
-950 For i = 1 To UBound(arr, 1)
-960     s = SafeText(arr(i, 1))
-970     If Len(s) > 0 Then
-980         If StrComp(s, taId, vbTextCompare) = 0 Then
-990             TaId_Exists = True
-1000            Exit Function
-1010        End If
-1020    End If
-1030 Next i
+arr = loBoms.ListColumns(idx).DataBodyRange.value
+For i = 1 To UBound(arr, 1)
+s = SafeText(arr(i, 1))
+If Len(s) > 0 Then
+If StrComp(s, taId, vbTextCompare) = 0 Then
+TaId_Exists = True
+Exit Function
+End If
+End If
+Next i
 End Function
 
 Private Function PnRev_Exists_InBoms(ByVal loBoms As ListObject, ByVal pn As String, ByVal rev As String) As Boolean
@@ -348,42 +345,42 @@ Private Function PnRev_Exists_InBoms(ByVal loBoms As ListObject, ByVal pn As Str
     Dim tokenPn As String, tokenRev As String
 
     PnRev_Exists_InBoms = False
-1100 If loBoms Is Nothing Then Exit Function
-1110 If loBoms.DataBodyRange Is Nothing Then Exit Function
+If loBoms Is Nothing Then Exit Function
+If loBoms.DataBodyRange Is Nothing Then Exit Function
 
     ' Preferred: structured columns if present
-1120 idxPn = GetColIndex(loBoms, "TAPN")
-1130 idxRev = GetColIndex(loBoms, "TARev")
-1140 If idxPn > 0 And idxRev > 0 Then
-1150     arrPn = loBoms.ListColumns(idxPn).DataBodyRange.Value
-1160     arrRev = loBoms.ListColumns(idxRev).DataBodyRange.Value
-1170     For i = 1 To UBound(arrPn, 1)
-1180         If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
+idxPn = GetColIndex(loBoms, "TAPN")
+idxRev = GetColIndex(loBoms, "TARev")
+If idxPn > 0 And idxRev > 0 Then
+arrPn = loBoms.ListColumns(idxPn).DataBodyRange.Value
+arrRev = loBoms.ListColumns(idxRev).DataBodyRange.Value
+For i = 1 To UBound(arrPn, 1)
+If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
                StrComp(SafeText(arrRev(i, 1)), rev, vbTextCompare) = 0 Then
-1190             PnRev_Exists_InBoms = True
-1200             Exit Function
-1210         End If
-1220     Next i
-1230     Exit Function
-1240 End If
+PnRev_Exists_InBoms = True
+Exit Function
+End If
+Next i
+Exit Function
+End If
 
     ' Backward-compat fallback: legacy encoded values in BOM_NOTES
-1250 idx = GetColIndex(loBoms, "BOM_NOTES")
-1260 If idx = 0 Then Exit Function
+idx = GetColIndex(loBoms, "BOM_NOTES")
+If idx = 0 Then Exit Function
 
-1270 tokenPn = "PN=" & pn & ";"
-1280 tokenRev = "Rev=" & rev & ";"
+tokenPn = "PN=" & pn & ";"
+tokenRev = "Rev=" & rev & ";"
 
-1290 arr = loBoms.ListColumns(idx).DataBodyRange.Value
-1300 For i = 1 To UBound(arr, 1)
-1310     notes = SafeText(arr(i, 1))
-1320     If Len(notes) > 0 Then
-1330         If InStr(1, notes, tokenPn, vbTextCompare) > 0 And InStr(1, notes, tokenRev, vbTextCompare) > 0 Then
-1340             PnRev_Exists_InBoms = True
-1350             Exit Function
-1360         End If
-1370     End If
-1380 Next i
+arr = loBoms.ListColumns(idx).DataBodyRange.Value
+For i = 1 To UBound(arr, 1)
+notes = SafeText(arr(i, 1))
+If Len(notes) > 0 Then
+If InStr(1, notes, tokenPn, vbTextCompare) > 0 And InStr(1, notes, tokenRev, vbTextCompare) > 0 Then
+PnRev_Exists_InBoms = True
+Exit Function
+End If
+End If
+Next i
 End Function
 
 '==========================
@@ -397,36 +394,36 @@ Private Function Comps_FindByCompId(ByVal loComps As ListObject, ByVal compId As
     Comps_FindByCompId = False
     revStatusOut = vbNullString
 
-1300 If loComps Is Nothing Then Exit Function
-1310 If loComps.DataBodyRange Is Nothing Then Exit Function
+If loComps Is Nothing Then Exit Function
+If loComps.DataBodyRange Is Nothing Then Exit Function
 
-1320 idxId = GetColIndex(loComps, "CompID")
-1330 idxPn = GetColIndex(loComps, "OurPN")
-1340 idxRev = GetColIndex(loComps, "OurRev")
-1350 idxRS = GetColIndex(loComps, "RevStatus") 'may be 0
+idxId = GetColIndex(loComps, "CompID")
+idxPn = GetColIndex(loComps, "OurPN")
+idxRev = GetColIndex(loComps, "OurRev")
+idxRS = GetColIndex(loComps, "RevStatus") 'may be 0
 
-1360 If idxId = 0 Or idxPn = 0 Or idxRev = 0 Then Exit Function
+If idxId = 0 Or idxPn = 0 Or idxRev = 0 Then Exit Function
 
-1370 arrId = loComps.ListColumns(idxId).DataBodyRange.value
-1380 arrPn = loComps.ListColumns(idxPn).DataBodyRange.value
-1390 arrRev = loComps.ListColumns(idxRev).DataBodyRange.value
-1400 If idxRS > 0 Then arrRS = loComps.ListColumns(idxRS).DataBodyRange.value
+arrId = loComps.ListColumns(idxId).DataBodyRange.value
+arrPn = loComps.ListColumns(idxPn).DataBodyRange.value
+arrRev = loComps.ListColumns(idxRev).DataBodyRange.value
+If idxRS > 0 Then arrRS = loComps.ListColumns(idxRS).DataBodyRange.value
 
-1410 For i = 1 To UBound(arrId, 1)
-1420     If StrComp(SafeText(arrId(i, 1)), compId, vbTextCompare) = 0 Then
-1430         If StrComp(SafeText(arrPn(i, 1)), ourPnIn, vbTextCompare) <> 0 Or _
+For i = 1 To UBound(arrId, 1)
+If StrComp(SafeText(arrId(i, 1)), compId, vbTextCompare) = 0 Then
+If StrComp(SafeText(arrPn(i, 1)), ourPnIn, vbTextCompare) <> 0 Or _
                StrComp(SafeText(arrRev(i, 1)), ourRevIn, vbTextCompare) <> 0 Then
-1440             MsgBox "TAID exists in Comps but PN/Rev does not match your input." & vbCrLf & _
+MsgBox "TAID exists in Comps but PN/Rev does not match your input." & vbCrLf & _
                        "Comps says: " & SafeText(arrPn(i, 1)) & " / " & SafeText(arrRev(i, 1)) & vbCrLf & _
                        "You entered: " & ourPnIn & " / " & ourRevIn, vbExclamation, "New BOM"
-1450             Exit Function
-1460         End If
+Exit Function
+End If
 
-1470         If idxRS > 0 Then revStatusOut = SafeText(arrRS(i, 1))
-1480         Comps_FindByCompId = True
-1490         Exit Function
-1500     End If
-1510 Next i
+If idxRS > 0 Then revStatusOut = SafeText(arrRS(i, 1))
+Comps_FindByCompId = True
+Exit Function
+End If
+Next i
 End Function
 
 '==========================
@@ -436,21 +433,21 @@ Private Function BuildUniqueSheetName(ByVal wb As Workbook, ByVal baseName As St
     Dim candidate As String
     Dim suffix As Long
 
-1600 candidate = NormalizeSheetName(baseName)
-1610 If Not WorksheetExists(wb, candidate) Then
-1620     BuildUniqueSheetName = candidate
-1630     Exit Function
-1640 End If
+candidate = NormalizeSheetName(baseName)
+If Not WorksheetExists(wb, candidate) Then
+BuildUniqueSheetName = candidate
+Exit Function
+End If
 
-1650 suffix = 1
-1660 Do
-1670     candidate = NormalizeSheetName(baseName & "_" & CStr(suffix))
-1680     If Not WorksheetExists(wb, candidate) Then
-1690         BuildUniqueSheetName = candidate
-1700         Exit Function
-1710     End If
-1720     suffix = suffix + 1
-1730 Loop
+suffix = 1
+Do
+candidate = NormalizeSheetName(baseName & "_" & CStr(suffix))
+If Not WorksheetExists(wb, candidate) Then
+BuildUniqueSheetName = candidate
+Exit Function
+End If
+suffix = suffix + 1
+Loop
 End Function
 
 Private Function NormalizeSheetName(ByVal nameIn As String) As String
@@ -474,21 +471,21 @@ Private Function BuildUniqueTableName(ByVal wb As Workbook, ByVal baseName As St
     Dim candidate As String
     Dim suffix As Long
 
-1800 candidate = NormalizeName(baseName)
-1810 If Not TableExists(wb, candidate) Then
-1820     BuildUniqueTableName = candidate
-1830     Exit Function
-1840 End If
+candidate = NormalizeName(baseName)
+If Not TableExists(wb, candidate) Then
+BuildUniqueTableName = candidate
+Exit Function
+End If
 
-1850 suffix = 1
-1860 Do
-1870     candidate = NormalizeName(baseName & "_" & CStr(suffix))
-1880     If Not TableExists(wb, candidate) Then
-1890         BuildUniqueTableName = candidate
-1900         Exit Function
-1910     End If
-1920     suffix = suffix + 1
-1930 Loop
+suffix = 1
+Do
+candidate = NormalizeName(baseName & "_" & CStr(suffix))
+If Not TableExists(wb, candidate) Then
+BuildUniqueTableName = candidate
+Exit Function
+End If
+suffix = suffix + 1
+Loop
 End Function
 
 Private Function NormalizeName(ByVal nameIn As String) As String
@@ -515,15 +512,15 @@ Private Function TableExists(ByVal wb As Workbook, ByVal tableName As String) As
     Dim ws As Worksheet
     Dim lo As ListObject
 
-2000 For Each ws In wb.Worksheets
-2010     For Each lo In ws.ListObjects
-2020         If StrComp(lo.Name, tableName, vbTextCompare) = 0 Then
-2030             TableExists = True
-2040             Exit Function
-2050         End If
-2060     Next lo
-2070 Next ws
-2080 TableExists = False
+For Each ws In wb.Worksheets
+For Each lo In ws.ListObjects
+If StrComp(lo.Name, tableName, vbTextCompare) = 0 Then
+TableExists = True
+Exit Function
+End If
+Next lo
+Next ws
+TableExists = False
 End Function
 
 '==========================
@@ -541,20 +538,20 @@ End Function
 
 Private Function GetColIndex(ByVal lo As ListObject, ByVal header As String) As Long
     Dim lc As ListColumn
-2100 For Each lc In lo.ListColumns
-2110     If StrComp(lc.Name, header, vbTextCompare) = 0 Then
-2120         GetColIndex = lc.Index
-2130         Exit Function
-2140     End If
-2150 Next lc
-2160 GetColIndex = 0
+For Each lc In lo.ListColumns
+If StrComp(lc.Name, header, vbTextCompare) = 0 Then
+GetColIndex = lc.Index
+Exit Function
+End If
+Next lc
+GetColIndex = 0
 End Function
 
 Private Sub SetByHeader(ByVal lo As ListObject, ByVal lr As ListRow, ByVal header As String, ByVal v As Variant)
     Dim idx As Long
-2200 idx = GetColIndex(lo, header)
-2210 If idx = 0 Then Err.Raise vbObjectError + 6201, "SetByHeader", "Missing column '" & header & "' in table '" & lo.Name & "'."
-2220 lr.Range.Cells(1, idx).value = v
+idx = GetColIndex(lo, header)
+If idx = 0 Then Err.Raise vbObjectError + 6201, "SetByHeader", "Missing column '" & header & "' in table '" & lo.Name & "'."
+lr.Range.Cells(1, idx).value = v
 End Sub
 
 '==========================
@@ -566,52 +563,52 @@ Private Function GenerateNextId(ByVal lo As ListObject, ByVal header As String, 
     Dim i As Long, s As String, n As Long
 
     GenerateNextId = vbNullString
-2300 idx = GetColIndex(lo, header)
-2310 If idx = 0 Then Exit Function
+idx = GetColIndex(lo, header)
+If idx = 0 Then Exit Function
 
-2320 maxN = 0
-2330 If Not lo.DataBodyRange Is Nothing Then
-2340     arr = lo.ListColumns(idx).DataBodyRange.value
-2350     For i = 1 To UBound(arr, 1)
-2360         s = SafeText(arr(i, 1))
-2370         If Len(s) > 0 Then
-2380             n = TrailingNumber(s)
-2390             If n > maxN Then maxN = n
-2400         End If
-2410     Next i
-2420 End If
+maxN = 0
+If Not lo.DataBodyRange Is Nothing Then
+arr = lo.ListColumns(idx).DataBodyRange.value
+For i = 1 To UBound(arr, 1)
+s = SafeText(arr(i, 1))
+If Len(s) > 0 Then
+n = TrailingNumber(s)
+If n > maxN Then maxN = n
+End If
+Next i
+End If
 
-2430 GenerateNextId = prefix & Right$(String$(padDigits, "0") & CStr(maxN + 1), padDigits)
+GenerateNextId = prefix & Right$(String$(padDigits, "0") & CStr(maxN + 1), padDigits)
 End Function
 
 Private Function TrailingNumber(ByVal s As String) As Long
     Dim i As Long, ch As String, digits As String
     digits = vbNullString
 
-2500 For i = Len(s) To 1 Step -1
-2510     ch = Mid$(s, i, 1)
-2520     If ch Like "#" Then
-2530         digits = ch & digits
-2540     Else
-2550         Exit For
-2560     End If
-2570 Next i
+For i = Len(s) To 1 Step -1
+ch = Mid$(s, i, 1)
+If ch Like "#" Then
+digits = ch & digits
+Else
+Exit For
+End If
+Next i
 
-2580 If Len(digits) = 0 Then
-2590     TrailingNumber = 0
-2600 Else
-2610     If IsNumeric(digits) Then
-2620         TrailingNumber = CLng(digits)
-2630     Else
-2640         TrailingNumber = 0
-2650     End If
-2660 End If
+If Len(digits) = 0 Then
+TrailingNumber = 0
+Else
+If IsNumeric(digits) Then
+TrailingNumber = CLng(digits)
+Else
+TrailingNumber = 0
+End If
+End If
 End Function
 
 Private Function GetUserNameSafe() As String
     Dim u As String
-2700 u = Trim$(Environ$("Username"))
-2710 If Len(u) = 0 Then u = Application.userName
-2720 If Len(Trim$(u)) = 0 Then u = "UNKNOWN"
-2730 GetUserNameSafe = u
+u = Trim$(Environ$("Username"))
+If Len(u) = 0 Then u = Application.userName
+If Len(Trim$(u)) = 0 Then u = "UNKNOWN"
+GetUserNameSafe = u
 End Function
