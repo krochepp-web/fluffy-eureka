@@ -73,9 +73,14 @@ Private Const CELL_SEARCH As String = "B2"
 Private Const CELL_REV As String = "B3"
 Private Const CELL_ACTIVEONLY As String = "B4"
 Private Const CELL_MAXRESULTS As String = "B5"
+Private Const CELL_COMPID As String = "B6"
+Private Const CELL_SUPPLIER As String = "B7"
+Private Const CELL_DESCRIPTION As String = "B8"
 
 ' Picker top-left for results table
-Private Const RESULTS_TOPLEFT As String = "A8"
+Private Const RESULTS_TOPLEFT As String = "A10"
+Private Const HELPER_SUPPLIER_TOPLEFT As String = "J2"
+Private Const HELPER_DESCRIPTION_TOPLEFT As String = "K2"
 
 ' Default settings
 Private Const DEFAULT_ACTIVEONLY As Boolean = True
@@ -94,6 +99,7 @@ Public Sub UI_Open_ComponentPicker()
 
     EnsurePickerSheetAndTable ThisWorkbook
     RefreshPickerResults ThisWorkbook
+    ThisWorkbook.Worksheets(SH_PICKERS).Activate
 
 CleanExit:
     Exit Sub
@@ -123,6 +129,7 @@ Public Sub UI_Refresh_PickerResults()
 
     EnsurePickerSheetAndTable ThisWorkbook
     RefreshPickerResults ThisWorkbook
+    ThisWorkbook.Worksheets(SH_PICKERS).Activate
 
 CleanExit:
     Exit Sub
@@ -394,17 +401,23 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
     End If
 
     ws.Range("A1").Value = "Component Picker"
-    ws.Range("A2").Value = "Search (Description/Notes/PN contains)"
+    ws.Range("A2").Value = "Search (Description/Notes/PN/CompID contains)"
     ws.Range("A3").Value = "Revision (optional exact match)"
     ws.Range("A4").Value = "Active only (TRUE/FALSE)"
     ws.Range("A5").Value = "Max results"
+    ws.Range("A6").Value = "CompID (optional exact match)"
+    ws.Range("A7").Value = "Supplier (optional exact match; dropdown)"
+    ws.Range("A8").Value = "Description (optional exact match; dropdown)"
 
     If Len(SafeText(ws.Range(CELL_SEARCH).Value)) = 0 Then ws.Range(CELL_SEARCH).Value = ""
     If Len(SafeText(ws.Range(CELL_REV).Value)) = 0 Then ws.Range(CELL_REV).Value = ""
     If Len(SafeText(ws.Range(CELL_ACTIVEONLY).Value)) = 0 Then ws.Range(CELL_ACTIVEONLY).Value = IIf(DEFAULT_ACTIVEONLY, "TRUE", "FALSE")
     If Len(SafeText(ws.Range(CELL_MAXRESULTS).Value)) = 0 Then ws.Range(CELL_MAXRESULTS).Value = DEFAULT_MAXRESULTS
+    If Len(SafeText(ws.Range(CELL_COMPID).Value)) = 0 Then ws.Range(CELL_COMPID).Value = ""
+    If Len(SafeText(ws.Range(CELL_SUPPLIER).Value)) = 0 Then ws.Range(CELL_SUPPLIER).Value = ""
+    If Len(SafeText(ws.Range(CELL_DESCRIPTION).Value)) = 0 Then ws.Range(CELL_DESCRIPTION).Value = ""
 
-    ws.Range("A7").Value = "Results (filter/sort, select rows, then run add macro):"
+    ws.Range("A9").Value = "Results (filter/sort, select rows, then run add macro):"
 
     Set lo = Nothing
     On Error Resume Next
@@ -439,10 +452,84 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
         Next i
     End If
 
+    RebuildPickerDropdownLists wb, ws
+
     Exit Sub
 
 EH:
     Err.Raise Err.Number, PROC_NAME, Err.Description
+End Sub
+
+Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Worksheet)
+    Dim loComps As ListObject
+    Dim idxSupplier As Long, idxDesc As Long, idxRS As Long
+    Dim arr As Variant
+    Dim r As Long
+    Dim dicSup As Object, dicDesc As Object
+    Dim supTop As Range, descTop As Range
+    Dim key As Variant
+    Dim outRow As Long
+
+    On Error GoTo EH
+
+    Set loComps = wb.Worksheets(SH_COMPS).ListObjects(LO_COMPS)
+    If loComps.DataBodyRange Is Nothing Then Exit Sub
+
+    idxSupplier = GetColIndex(loComps, "SupplierName")
+    idxDesc = GetColIndex(loComps, "ComponentDescription")
+    idxRS = GetColIndex(loComps, "RevStatus")
+    If idxDesc = 0 Or idxRS = 0 Then Exit Sub
+
+    arr = loComps.DataBodyRange.Value
+    Set dicSup = CreateObject("Scripting.Dictionary")
+    dicSup.CompareMode = vbTextCompare
+    Set dicDesc = CreateObject("Scripting.Dictionary")
+    dicDesc.CompareMode = vbTextCompare
+
+    For r = 1 To UBound(arr, 1)
+        If StrComp(SafeText(arr(r, idxRS)), ACTIVE_LABEL, vbTextCompare) = 0 Then
+            If idxSupplier > 0 Then
+                If Len(SafeText(arr(r, idxSupplier))) > 0 Then dicSup(SafeText(arr(r, idxSupplier))) = True
+            End If
+            If Len(SafeText(arr(r, idxDesc))) > 0 Then dicDesc(SafeText(arr(r, idxDesc))) = True
+        End If
+    Next r
+
+    wsPick.Range("J1").Value = "SupplierOptions"
+    wsPick.Range("K1").Value = "DescriptionOptions"
+    wsPick.Range("J2:J5000").ClearContents
+    wsPick.Range("K2:K5000").ClearContents
+
+    Set supTop = wsPick.Range(HELPER_SUPPLIER_TOPLEFT)
+    outRow = 0
+    For Each key In dicSup.Keys
+        outRow = outRow + 1
+        supTop.Offset(outRow - 1, 0).Value = CStr(key)
+    Next key
+
+    Set descTop = wsPick.Range(HELPER_DESCRIPTION_TOPLEFT)
+    outRow = 0
+    For Each key In dicDesc.Keys
+        outRow = outRow + 1
+        descTop.Offset(outRow - 1, 0).Value = CStr(key)
+    Next key
+
+    ApplyValidationListFromRange wsPick.Range(CELL_SUPPLIER), wsPick.Range("J2:J5000")
+    ApplyValidationListFromRange wsPick.Range(CELL_DESCRIPTION), wsPick.Range("K2:K5000")
+    Exit Sub
+
+EH:
+    ' Non-fatal helper; picker remains usable without dropdowns
+End Sub
+
+Private Sub ApplyValidationListFromRange(ByVal targetCell As Range, ByVal listRange As Range)
+    On Error Resume Next
+    targetCell.Validation.Delete
+    On Error GoTo 0
+
+    targetCell.Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:=xlBetween, Formula1:="='" & targetCell.Worksheet.Name & "'!" & listRange.Address
+    targetCell.Validation.IgnoreBlank = True
+    targetCell.Validation.InCellDropdown = True
 End Sub
 
 Private Sub RefreshPickerResults(ByVal wb As Workbook)
@@ -455,6 +542,9 @@ Private Sub RefreshPickerResults(ByVal wb As Workbook)
     Dim revFilter As String
     Dim activeOnly As Boolean
     Dim maxResults As Long
+    Dim compIdFilter As String
+    Dim supplierFilter As String
+    Dim descExactFilter As String
 
     On Error GoTo EH
 
@@ -465,11 +555,14 @@ Private Sub RefreshPickerResults(ByVal wb As Workbook)
     revFilter = Trim$(SafeText(wsPick.Range(CELL_REV).Value))
     activeOnly = ParseBoolDefault(wsPick.Range(CELL_ACTIVEONLY).Value, DEFAULT_ACTIVEONLY)
     maxResults = ParseLongDefault(wsPick.Range(CELL_MAXRESULTS).Value, DEFAULT_MAXRESULTS)
+    compIdFilter = Trim$(SafeText(wsPick.Range(CELL_COMPID).Value))
+    supplierFilter = Trim$(SafeText(wsPick.Range(CELL_SUPPLIER).Value))
+    descExactFilter = Trim$(SafeText(wsPick.Range(CELL_DESCRIPTION).Value))
     If maxResults < 1 Then maxResults = DEFAULT_MAXRESULTS
 
     Dim outArr As Variant
     Dim outCount As Long
-    outArr = Picker_GetResults(wb, searchText, revFilter, activeOnly, maxResults, outCount)
+    outArr = Picker_GetResults(wb, searchText, revFilter, activeOnly, maxResults, outCount, compIdFilter, supplierFilter, descExactFilter)
 
     If outCount = 0 Then
         ClearPickResults loPick
@@ -489,13 +582,16 @@ Public Function Picker_GetResults( _
     ByVal revFilter As String, _
     ByVal activeOnly As Boolean, _
     ByVal maxResults As Long, _
-    ByRef outCount As Long) As Variant
+    ByRef outCount As Long, _
+    Optional ByVal compIdFilter As String = "", _
+    Optional ByVal supplierFilter As String = "", _
+    Optional ByVal descExactFilter As String = "") As Variant
     Const PROC_NAME As String = "M_Data_BOMs_Picker.Picker_GetResults"
 
     Dim wsComps As Worksheet
     Dim loComps As ListObject
 
-    Dim idxCompID As Long, idxPn As Long, idxRev As Long, idxDesc As Long, idxUom As Long, idxNotes As Long, idxRS As Long
+    Dim idxCompID As Long, idxPn As Long, idxRev As Long, idxDesc As Long, idxUom As Long, idxNotes As Long, idxRS As Long, idxSupplier As Long
     Dim compsArr As Variant
     Dim outArr() As Variant
     Dim r As Long
@@ -512,6 +608,7 @@ Public Function Picker_GetResults( _
     idxUom = GetColIndex(loComps, "UOM")
     idxNotes = GetColIndex(loComps, "ComponentNotes")
     idxRS = GetColIndex(loComps, "RevStatus")
+    idxSupplier = GetColIndex(loComps, "SupplierName")
 
     If idxCompID = 0 Or idxPn = 0 Or idxRev = 0 Or idxDesc = 0 Or idxUom = 0 Or idxNotes = 0 Or idxRS = 0 Then
         Err.Raise vbObjectError + 8101, PROC_NAME, "Comps.TBL_COMPS missing one or more required headers."
@@ -528,13 +625,15 @@ Public Function Picker_GetResults( _
     ReDim outArr(1 To maxResults, 1 To 7)
 
     For r = 1 To UBound(compsArr, 1)
-        Dim cDesc As String, cNotes As String, cPN As String, cRev As String, cRS As String
+        Dim cId As String, cDesc As String, cNotes As String, cPN As String, cRev As String, cRS As String, cSupplier As String
 
+        cId = SafeText(compsArr(r, idxCompID))
         cDesc = SafeText(compsArr(r, idxDesc))
         cNotes = SafeText(compsArr(r, idxNotes))
         cPN = SafeText(compsArr(r, idxPn))
         cRev = SafeText(compsArr(r, idxRev))
         cRS = SafeText(compsArr(r, idxRS))
+        If idxSupplier > 0 Then cSupplier = SafeText(compsArr(r, idxSupplier))
 
         If activeOnly Then
             If StrComp(cRS, ACTIVE_LABEL, vbTextCompare) <> 0 Then GoTo NextRow
@@ -543,11 +642,23 @@ Public Function Picker_GetResults( _
         If Len(revFilter) > 0 Then
             If StrComp(cRev, revFilter, vbTextCompare) <> 0 Then GoTo NextRow
         End If
+        If Len(compIdFilter) > 0 Then
+            If StrComp(cId, compIdFilter, vbTextCompare) <> 0 Then GoTo NextRow
+        End If
+
+        If Len(supplierFilter) > 0 Then
+            If StrComp(cSupplier, supplierFilter, vbTextCompare) <> 0 Then GoTo NextRow
+        End If
+
+        If Len(descExactFilter) > 0 Then
+            If StrComp(cDesc, descExactFilter, vbTextCompare) <> 0 Then GoTo NextRow
+        End If
 
         If Len(searchText) > 0 Then
             If InStr(1, LCase$(cDesc), searchText, vbTextCompare) = 0 And _
                InStr(1, LCase$(cNotes), searchText, vbTextCompare) = 0 And _
-               InStr(1, LCase$(cPN), searchText, vbTextCompare) = 0 Then
+               InStr(1, LCase$(cPN), searchText, vbTextCompare) = 0 And _
+               InStr(1, LCase$(cId), searchText, vbTextCompare) = 0 Then
                 GoTo NextRow
             End If
         End If

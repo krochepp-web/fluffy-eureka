@@ -21,10 +21,13 @@ Why: these checks confirm core schema/platform readiness and refresh registry me
 1. Run: `UI_Open_ComponentPicker`
 2. This creates/updates `Pickers` and `TBL_PICK_RESULTS` if needed.
 3. Enter filter values in:
-   - `B2` search text (description / notes / PN contains)
+   - `B2` search text (description / notes / PN / CompID contains)
    - `B3` revision (optional exact)
    - `B4` active only (TRUE/FALSE)
    - `B5` max results
+   - `B6` CompID (optional exact match)
+   - `B7` Supplier (optional exact match via dropdown)
+   - `B8` Description (optional exact match via dropdown)
 4. Run: `UI_Refresh_PickerResults` after changing filters.
 
 ### Optional UserForm launcher
@@ -74,6 +77,7 @@ Behavior:
 The picker pipeline enforces:
 
 - Active component selection (`RevStatus = Active` when filter enabled / add processing)
+- Exact matching filters for `CompID`, `Supplier`, and `Description` when provided
 - Positive quantity only
 - Target table/header presence checks by context
 - Uniqueness checks across **active** component mappings before writes:
