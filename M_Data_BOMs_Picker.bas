@@ -581,7 +581,7 @@ Private Sub WritePickResults(ByVal loPick As ListObject, ByRef outArr As Variant
     Application.ScreenUpdating = True
 End Sub
 
-Private Function Slice2D(ByRef src() As Variant, ByVal rows As Long, ByVal cols As Long) As Variant
+Private Function Slice2D(ByRef src As Variant, ByVal rows As Long, ByVal cols As Long) As Variant
     Dim out As Variant
     Dim r As Long, c As Long
     ReDim out(1 To rows, 1 To cols)
