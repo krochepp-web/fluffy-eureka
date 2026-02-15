@@ -14,7 +14,7 @@ Option Explicit
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - BOM_TEMPLATE: TBL_BOM_TEMPLATE
-'   - BOMS: TBL_BOMS [BOMID, BOMTab, TAID, BOM_NOTES] (+ optional TAPN, TARev, TADesc)
+'   - BOMS: TBL_BOMS [BOMID, BOMTab, TAID, BOM_NOTES, TARev, TADesc] (+ optional TAPN)
 '   - Comps (optional): TBL_COMPS for best-effort TA validation
 '
 ' Outputs:
@@ -211,6 +211,9 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 
 660 newTableName = BuildUniqueTableName(wb, "TBL_BOM_" & NormalizeName(taId))
 670 loNew.Name = newTableName
+
+    ' Populate TA Description field on new BOM sheet
+675 wsNew.Range("C4").value = taDesc
 
     ' Register in BOMS table
 680 Dim lr As ListRow
