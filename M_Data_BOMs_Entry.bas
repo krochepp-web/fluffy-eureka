@@ -14,7 +14,7 @@ Option Explicit
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - BOM_TEMPLATE: TBL_BOM_TEMPLATE
-'   - BOMS: TBL_BOMS [BOMID, BOMTab, TAID, BOM_NOTES] (+ optional TAPN, TARev, TADesc)
+'   - BOMS: TBL_BOMS [BOMID, BOMTab, TAID, BOM_NOTES, TARev, TADesc] (+ optional TAPN)
 '   - Comps (optional): TBL_COMPS for best-effort TA validation
 '
 ' Outputs:
@@ -215,12 +215,18 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
     ' Populate TA description cell on the new BOM sheet
 635 wsNew.Range("C4").Value = taDesc
 
+    ' Populate TA description cell on the new BOM sheet
+635 wsNew.Range("C4").Value = taDesc
+
     ' Rename the copied BOM table
 640 If wsNew.ListObjects.Count < 1 Then Err.Raise vbObjectError + 6202, PROC_NAME, "No table found on copied BOM sheet."
 650 Set loNew = wsNew.ListObjects(1)
 
 660 newTableName = BuildUniqueTableName(wb, "TBL_BOM_" & NormalizeName(taId))
 670 loNew.Name = newTableName
+
+    ' Populate TA Description field on new BOM sheet
+675 wsNew.Range("C4").value = taDesc
 
     ' Register in BOMS table
 680 Dim lr As ListRow
