@@ -9,7 +9,7 @@ Option Explicit
 '   requiring Comps.IsBuildable. Collects TAID (unique), TAPN, TARev, TADesc,
 '   and optional BOM_NOTES from optional arguments or manual prompts, then
 '   registers the result in BOMS.
-'   Creates sheet "BOM_<TAID>" (normalized; unique if needed) and registers row
+'   Creates sheet "BOM_<TAID>" (exact TAID suffix) and registers row
 '   in BOMS.TBL_BOMS. Includes line-numbered diagnostics for debugging Error 13.
 '
 ' Inputs (Tabs/Tables/Headers):
@@ -199,8 +199,21 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 600 wsTemplate.Copy After:=wb.Sheets(wb.Sheets.Count)
 610 Set wsNew = wb.Worksheets(wb.Worksheets.Count)
 
-620 newSheetName = BuildUniqueSheetName(wb, BOM_TAB_PREFIX & taId)
-630 wsNew.Name = newSheetName
+620 newSheetName = BOM_TAB_PREFIX & taId
+625 If StrComp(NormalizeSheetName(newSheetName), newSheetName, vbBinaryCompare) <> 0 Then
+626     MsgBox "TAID contains characters that cannot be used in BOM tab names." & vbCrLf & _
+               "TAID=" & taId, vbExclamation, "New BOM"
+627     GoTo CleanExit
+628 End If
+629 If WorksheetExists(wb, newSheetName) Then
+630     MsgBox "A BOM tab named " & newSheetName & " already exists. TAID must map 1:1 to tab name." & vbCrLf & _
+               "Choose a different TAID.", vbExclamation, "New BOM"
+631     GoTo CleanExit
+632 End If
+633 wsNew.Name = newSheetName
+
+    ' Populate TA description cell on the new BOM sheet
+635 wsNew.Range("C4").Value = taDesc
 
     ' Populate TA description cell on the new BOM sheet
 635 wsNew.Range("C4").Value = taDesc
