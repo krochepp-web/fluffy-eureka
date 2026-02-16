@@ -239,6 +239,11 @@ SetByHeader loBoms, lr, "BOM_NOTES", bomNotes
 If ColumnExists(loBoms, "TARev") Then SetByHeader loBoms, lr, "TARev", taRev
 If ColumnExists(loBoms, "TADesc") Then SetByHeader loBoms, lr, "TADesc", taDesc
 If ColumnExists(loBoms, "TAPN") Then SetByHeader loBoms, lr, "TAPN", taPn
+If ColumnExists(loBoms, M_Core_Constants.COL_BOM_STATUS) Then
+    SetByHeader loBoms, lr, M_Core_Constants.COL_BOM_STATUS, M_Core_Constants.BOM_STATUS_DRAFT
+ElseIf ColumnExists(loBoms, "Status") Then
+    SetByHeader loBoms, lr, "Status", M_Core_Constants.BOM_STATUS_DRAFT
+End If
 
 If ColumnExists(loBoms, "CreatedAt") Then SetByHeader loBoms, lr, "CreatedAt", createdAt
 If ColumnExists(loBoms, "CreatedBy") Then SetByHeader loBoms, lr, "CreatedBy", createdBy

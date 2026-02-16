@@ -157,6 +157,7 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
     Dim wsComps As Worksheet
     Dim loComps As ListObject
 
+    Dim bomId As String
     Dim compId As String, desc As String, uom As String, notes As String
 
     On Error GoTo EH
@@ -168,6 +169,17 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
 
     Set wb = ThisWorkbook
     Set loBom = ResolveTargetTable(wb, PickerTarget_BOM)
+
+    bomId = M_Data_BOMs_Status.GetBomIdByTabName(loBom.Parent.Name)
+    If Len(bomId) = 0 Then
+        MsgBox "Could not resolve BOMID for active BOM sheet.", vbExclamation, "Component Picker"
+        Exit Sub
+    End If
+    If Not M_Data_BOMs_Status.CanEditBom(bomId) Then
+        MsgBox M_Data_BOMs_Status.GetBomEditDisabledMessage(bomId), vbExclamation, "Component Picker"
+        Exit Sub
+    End If
+
     Set wsComps = wb.Worksheets(SH_COMPS)
     Set loComps = wsComps.ListObjects(LO_COMPS)
 
@@ -238,12 +250,25 @@ Private Sub AddPickedRowsToTarget(ByVal wb As Workbook, ByVal loPick As ListObje
 
     Dim compId As String, pn As String, rev As String, desc As String, uom As String, notes As String, rs As String
     Dim qtyVal As Double
+    Dim bomId As String
 
     On Error GoTo EH
 
     ValidateUniqueActiveMappings wb
 
     Set loTarget = ResolveTargetTable(wb, targetContext)
+
+    If targetContext = PickerTarget_BOM Then
+        bomId = M_Data_BOMs_Status.GetBomIdByTabName(loTarget.Parent.Name)
+        If Len(bomId) = 0 Then
+            MsgBox "Could not resolve BOMID for active BOM sheet.", vbExclamation, "Component Picker"
+            Exit Sub
+        End If
+        If Not M_Data_BOMs_Status.CanEditBom(bomId) Then
+            MsgBox M_Data_BOMs_Status.GetBomEditDisabledMessage(bomId), vbExclamation, "Component Picker"
+            Exit Sub
+        End If
+    End If
 
     For i = 1 To rowIndices.Count
         pickRowIndex = CLng(rowIndices(i))

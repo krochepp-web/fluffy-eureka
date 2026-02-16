@@ -55,6 +55,7 @@ Public Sub UI_Add_Components_To_BOM()
     Dim loBom As ListObject
     Dim loComps As ListObject
 
+    Dim bomId As String
     Dim pn As String, rev As String
     Dim qtyPer As Double
 
@@ -69,6 +70,16 @@ Public Sub UI_Add_Components_To_BOM()
     If wsBom.ListObjects.Count < 1 Then Err.Raise vbObjectError + 7001, PROC_NAME, "Active sheet has no table (ListObject)."
 
     Set loBom = wsBom.ListObjects(1)
+
+    bomId = M_Data_BOMs_Status.GetBomIdByTabName(wsBom.Name)
+    If Len(bomId) = 0 Then
+        MsgBox "Could not resolve BOMID for sheet '" & wsBom.Name & "'.", vbExclamation, "Add Components to BOM"
+        Exit Sub
+    End If
+    If Not M_Data_BOMs_Status.CanEditBom(bomId) Then
+        MsgBox M_Data_BOMs_Status.GetBomEditDisabledMessage(bomId), vbExclamation, "Add Components to BOM"
+        Exit Sub
+    End If
 
     ' BOM required headers
     RequireColumn loBom, "CompID"
