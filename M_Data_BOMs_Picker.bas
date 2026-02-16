@@ -443,14 +443,21 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
 
         If Not lo.DataBodyRange Is Nothing Then lo.DataBodyRange.ClearContents
     Else
-        For i = LBound(headers) To UBound(headers)
-            If i + 1 > lo.ListColumns.Count Then
-                Err.Raise vbObjectError + 8001, PROC_NAME, "Picker table header mismatch. Recreate TBL_PICK_RESULTS."
-            End If
-            If StrComp(lo.ListColumns(i + 1).Name, CStr(headers(i)), vbTextCompare) <> 0 Then
-                Err.Raise vbObjectError + 8002, PROC_NAME, "Picker table header mismatch. Expected '" & headers(i) & "'. Found '" & lo.ListColumns(i + 1).Name & "'."
-            End If
-        Next i
+        Dim tableNeedsReset As Boolean
+        tableNeedsReset = (lo.ListColumns.Count <> (UBound(headers) - LBound(headers) + 1))
+
+        If Not tableNeedsReset Then
+            For i = LBound(headers) To UBound(headers)
+                If StrComp(lo.ListColumns(i + 1).Name, CStr(headers(i)), vbTextCompare) <> 0 Then
+                    tableNeedsReset = True
+                    Exit For
+                End If
+            Next i
+        End If
+
+        If tableNeedsReset Then
+            Set lo = ResetPickerResultsTable(ws, lo, headers)
+        End If
     End If
 
     RebuildPickerDropdownLists wb, ws
@@ -460,6 +467,27 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
 EH:
     Err.Raise Err.Number, PROC_NAME, Err.Description
 End Sub
+
+Private Function ResetPickerResultsTable(ByVal ws As Worksheet, ByVal lo As ListObject, ByVal headers As Variant) As ListObject
+    Dim i As Long
+    Dim rngTopLeft As Range
+    Dim rngTable As Range
+
+    If Not lo Is Nothing Then lo.Delete
+
+    Set rngTopLeft = ws.Range(RESULTS_TOPLEFT)
+
+    For i = LBound(headers) To UBound(headers)
+        rngTopLeft.Offset(0, i).Value = headers(i)
+    Next i
+
+    Set rngTable = ws.Range(rngTopLeft, rngTopLeft.Offset(1, UBound(headers)))
+    Set ResetPickerResultsTable = ws.ListObjects.Add(SourceType:=xlSrcRange, Source:=rngTable, XlListObjectHasHeaders:=xlYes)
+    ResetPickerResultsTable.Name = LO_PICK_RESULTS
+    ResetPickerResultsTable.TableStyle = "TableStyleLight9"
+
+    If Not ResetPickerResultsTable.DataBodyRange Is Nothing Then ResetPickerResultsTable.DataBodyRange.ClearContents
+End Function
 
 Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Worksheet)
     Dim loComps As ListObject
