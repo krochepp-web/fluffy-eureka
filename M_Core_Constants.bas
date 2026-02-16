@@ -102,6 +102,7 @@ Public Const COL_USER_NAME        As String = "UserName"
 Public Const COL_TRANSACTION_ID   As String = "TransactionID"
 
 Public Const COL_BOM_ID           As String = "BOMID"
+Public Const COL_BOM_STATUS       As String = "BOMStatus"
 Public Const COL_ASSEMBLY_ID      As String = "AssemblyID"
 Public Const COL_TAID             As String = "TAID"
 
@@ -161,6 +162,14 @@ Public Const COL_BUILD_QTY_DEMAND As String = "BuildQuantityDemand"
 Public Const COL_PO_QTY           As String = "POQuantity"
 Public Const COL_PRICE_PER_UOM    As String = "PricePerUOM"
 Public Const COL_PO_LINE_TOTAL    As String = "POLineTotal"
+
+'===============================================================================
+' BOM lifecycle statuses
+'===============================================================================
+
+Public Const BOM_STATUS_DRAFT     As String = "DRAFT"
+Public Const BOM_STATUS_LOCK      As String = "LOCK"
+Public Const BOM_STATUS_OBSOLETE  As String = "OBSOLETE"
 
 '===============================================================================
 ' Log Levels
