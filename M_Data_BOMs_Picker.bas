@@ -5,8 +5,8 @@ Option Explicit
 ' Module: M_Data_BOMs_Picker
 '
 ' Purpose:
-'   Provide an in-sheet "picker" UX to search Components by
-'   description (and optionally revision) and add selected rows to the active BOM sheet.
+'   Provide a reusable in-sheet component picker UX and route selected components
+'   into BOM, PO Lines, or Inventory targets.
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - Comps sheet: TBL_COMPS
@@ -23,31 +23,35 @@ Option Explicit
 '         TBL_PICK_RESULTS with headers:
 '           CompID, OurPN, OurRev, ComponentDescription, UOM, ComponentNotes, RevStatus
 '
-'   - Active BOM sheet:
-'       Uses the first ListObject on the active sheet as the BOM table.
-'       Required headers:
-'         CompID, OurPN, OurRev, Description, UOM, QtyPer, CompNotes
-'       Optional headers:
-'         CreatedAt, CreatedBy, UpdatedAt, UpdatedBy
+'   - Targets by context:
+'       BOM: active sheet ListObject with BOM headers
+'       PO:  POLines.TBL_POLINES
+'       INV: Inv.TBL_INV
 '
 ' Outputs / Side effects:
 '   - Creates/updates Pickers sheet and results table
-'   - Adds selected components from picker to active BOM table
-'   - If component already exists in BOM (PN+Rev), increases QtyPer deterministically
+'   - Adds selected components to target table by context
+'   - Enforces active components and guards duplicate PN+Rev active mappings
 '
 ' Preconditions / Postconditions:
 '   - Comps.TBL_COMPS exists and is well-formed
-'   - User selects one or more rows in TBL_PICK_RESULTS before adding
+'   - User selects one or more rows in TBL_PICK_RESULTS
 '
 ' Errors & Guards:
-'   - No Select/Activate used
+'   - No Select/Activate in core write logic
 '   - SafeText() prevents Type mismatch on Excel error values
-'   - Clear error messages for missing tables/headers
+'   - Fail-fast header checks and context/table guards
 '
-' Version: v1.0.0
+' Version: v1.2.0
 ' Author: ChatGPT
-' Date: 2026-02-07
+' Date: 2026-02-15
 '===============================================================================
+
+Private Enum PickerTargetContext
+    PickerTarget_BOM = 1
+    PickerTarget_PO = 2
+    PickerTarget_INV = 3
+End Enum
 
 '==========================
 ' Constants (schema contract)
@@ -58,14 +62,25 @@ Private Const LO_COMPS As String = "TBL_COMPS"
 Private Const SH_PICKERS As String = "Pickers"
 Private Const LO_PICK_RESULTS As String = "TBL_PICK_RESULTS"
 
+Private Const SH_POLINES As String = "POLines"
+Private Const LO_POLINES As String = "TBL_POLINES"
+
+Private Const SH_INV As String = "Inv"
+Private Const LO_INV As String = "TBL_INV"
+
 ' Picker input layout
 Private Const CELL_SEARCH As String = "B2"
 Private Const CELL_REV As String = "B3"
 Private Const CELL_ACTIVEONLY As String = "B4"
 Private Const CELL_MAXRESULTS As String = "B5"
+Private Const CELL_COMPID As String = "B6"
+Private Const CELL_SUPPLIER As String = "B7"
+Private Const CELL_DESCRIPTION As String = "B8"
 
 ' Picker top-left for results table
-Private Const RESULTS_TOPLEFT As String = "A8"
+Private Const RESULTS_TOPLEFT As String = "A10"
+Private Const HELPER_SUPPLIER_TOPLEFT As String = "J2"
+Private Const HELPER_DESCRIPTION_TOPLEFT As String = "K2"
 
 ' Default settings
 Private Const DEFAULT_ACTIVEONLY As Boolean = True
@@ -78,13 +93,13 @@ Private Const ACTIVE_LABEL As String = "Active"
 '==========================
 
 Public Sub UI_Open_ComponentPicker()
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.UI_Open_ComponentPicker"
     On Error GoTo EH
 
     If Not GateReady_Safe(True) Then GoTo CleanExit
 
     EnsurePickerSheetAndTable ThisWorkbook
     RefreshPickerResults ThisWorkbook
+    ThisWorkbook.Worksheets(SH_PICKERS).Activate
 
 CleanExit:
     Exit Sub
@@ -94,14 +109,27 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
 End Sub
 
+' Optional userform wrapper hook (if a custom UF_ComponentPicker exists).
+Public Sub UI_Open_ComponentPicker_Form_Optional()
+    On Error GoTo Fallback
+
+    VBA.UserForms.Add("UF_ComponentPicker").Show
+    Exit Sub
+
+Fallback:
+    Err.Clear
+    UI_Open_ComponentPicker
+    MsgBox "UF_ComponentPicker was not found. Opened the sheet-based picker instead.", vbInformation, "Component Picker"
+End Sub
+
 Public Sub UI_Refresh_PickerResults()
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.UI_Refresh_PickerResults"
     On Error GoTo EH
 
     If Not GateReady_Safe(True) Then GoTo CleanExit
 
     EnsurePickerSheetAndTable ThisWorkbook
     RefreshPickerResults ThisWorkbook
+    ThisWorkbook.Worksheets(SH_PICKERS).Activate
 
 CleanExit:
     Exit Sub
@@ -112,24 +140,18 @@ EH:
 End Sub
 
 Public Sub UI_Add_SelectedPickerRows_To_ActiveBOM()
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.UI_Add_SelectedPickerRows_To_ActiveBOM"
-    On Error GoTo EH
+    UI_Add_SelectedPickerRows_ToContext PickerTarget_BOM
+End Sub
 
-    If Not GateReady_Safe(True) Then GoTo CleanExit
+Public Sub UI_Add_SelectedPickerRows_To_POLines()
+    UI_Add_SelectedPickerRows_ToContext PickerTarget_PO
+End Sub
 
-    AddSelectedPickerRowsToActiveBOM ThisWorkbook
-
-CleanExit:
-    Exit Sub
-
-EH:
-    MsgBox "Add selected components failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
+Public Sub UI_Add_SelectedPickerRows_To_Inventory()
+    UI_Add_SelectedPickerRows_ToContext PickerTarget_INV
 End Sub
 
 Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVal qtyPer As Double)
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.AddComponentToActiveBOM"
-
     Dim wb As Workbook
     Dim loBom As ListObject
     Dim wsComps As Worksheet
@@ -145,26 +167,218 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
     End If
 
     Set wb = ThisWorkbook
-    Set loBom = GetActiveBomTable()
+    Set loBom = ResolveTargetTable(wb, PickerTarget_BOM)
     Set wsComps = wb.Worksheets(SH_COMPS)
     Set loComps = wsComps.ListObjects(LO_COMPS)
 
-    If Not Comps_LookupActive(loComps, pn, rev, ACTIVE_LABEL, compId, desc, uom, notes) Then
-        Exit Sub
-    End If
+    If Not Comps_LookupActive(loComps, pn, rev, ACTIVE_LABEL, compId, desc, uom, notes) Then Exit Sub
 
-    Bom_UpsertComponent loBom, compId, pn, rev, desc, uom, qtyPer, notes
+    WriteComponentToTarget loBom, PickerTarget_BOM, compId, pn, rev, desc, uom, qtyPer, notes
     Exit Sub
 
 EH:
     MsgBox "Add component failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
 End Sub
+
+'==========================
+' Context-aware add orchestration
+'==========================
+Private Sub UI_Add_SelectedPickerRows_ToContext(ByVal targetContext As PickerTargetContext)
+    Dim wb As Workbook
+    Dim wsPick As Worksheet
+    Dim loPick As ListObject
+    Dim rowIndices As Collection
+    Dim qtyDefault As Double
+    Dim promptPerRowQty As Boolean
+
+    On Error GoTo EH
+
+    If Not GateReady_Safe(True) Then Exit Sub
+
+    Set wb = ThisWorkbook
+    Set wsPick = wb.Worksheets(SH_PICKERS)
+    Set loPick = wsPick.ListObjects(LO_PICK_RESULTS)
+
+    If loPick.DataBodyRange Is Nothing Then
+        MsgBox "No picker results to add.", vbInformation, "Component Picker"
+        Exit Sub
+    End If
+
+    Set rowIndices = GetSelectedPickerRowIndices(loPick)
+    If rowIndices.Count = 0 Then
+        MsgBox "Select one or more rows in the picker results table first.", vbExclamation, "Component Picker"
+        Exit Sub
+    End If
+
+    qtyDefault = PromptDouble_Simple("Enter default quantity (> 0):", "Component Picker", 1#)
+    If qtyDefault <= 0 Then Exit Sub
+
+    promptPerRowQty = PromptYesNo("Do you want to enter quantity per selected row?" & vbCrLf & _
+                                  "Yes = prompt for each row" & vbCrLf & _
+                                  "No = apply default quantity to all rows", _
+                                  "Quantity Mode", False)
+
+    AddPickedRowsToTarget wb, loPick, rowIndices, targetContext, qtyDefault, promptPerRowQty
+
+    MsgBox "Selected components processed for " & ContextLabel(targetContext) & ".", vbInformation, "Component Picker"
+    Exit Sub
+
+EH:
+    MsgBox "Add selected components failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
+End Sub
+
+Private Sub AddPickedRowsToTarget(ByVal wb As Workbook, ByVal loPick As ListObject, ByVal rowIndices As Collection, _
+                                  ByVal targetContext As PickerTargetContext, ByVal qtyDefault As Double, _
+                                  ByVal promptPerRowQty As Boolean)
+    Dim loTarget As ListObject
+    Dim i As Long
+    Dim pickRowIndex As Long
+
+    Dim compId As String, pn As String, rev As String, desc As String, uom As String, notes As String, rs As String
+    Dim qtyVal As Double
+
+    On Error GoTo EH
+
+    ValidateUniqueActiveMappings wb
+
+    Set loTarget = ResolveTargetTable(wb, targetContext)
+
+    For i = 1 To rowIndices.Count
+        pickRowIndex = CLng(rowIndices(i))
+
+        compId = SafeText(loPick.ListColumns("CompID").DataBodyRange.Cells(pickRowIndex, 1).Value)
+        pn = SafeText(loPick.ListColumns("OurPN").DataBodyRange.Cells(pickRowIndex, 1).Value)
+        rev = SafeText(loPick.ListColumns("OurRev").DataBodyRange.Cells(pickRowIndex, 1).Value)
+        desc = SafeText(loPick.ListColumns("ComponentDescription").DataBodyRange.Cells(pickRowIndex, 1).Value)
+        uom = SafeText(loPick.ListColumns("UOM").DataBodyRange.Cells(pickRowIndex, 1).Value)
+        notes = SafeText(loPick.ListColumns("ComponentNotes").DataBodyRange.Cells(pickRowIndex, 1).Value)
+        rs = SafeText(loPick.ListColumns("RevStatus").DataBodyRange.Cells(pickRowIndex, 1).Value)
+
+        If StrComp(rs, ACTIVE_LABEL, vbTextCompare) <> 0 Then
+            MsgBox "Skipping non-active component: " & pn & " / " & rev & " (RevStatus=" & rs & ")", vbExclamation, "Component Picker"
+            GoTo NextRow
+        End If
+
+        qtyVal = qtyDefault
+        If promptPerRowQty Then
+            qtyVal = PromptDouble_Simple("Qty for " & pn & " / " & rev & " (> 0):", "Component Picker", qtyDefault)
+            If qtyVal <= 0 Then GoTo NextRow
+        End If
+
+        WriteComponentToTarget loTarget, targetContext, compId, pn, rev, desc, uom, qtyVal, notes
+
+NextRow:
+    Next i
+
+    Exit Sub
+
+EH:
+    Err.Raise Err.Number, "AddPickedRowsToTarget", Err.Description
+End Sub
+
+Private Function ResolveTargetTable(ByVal wb As Workbook, ByVal targetContext As PickerTargetContext) As ListObject
+    Dim ws As Worksheet
+
+    Select Case targetContext
+        Case PickerTarget_BOM
+            Set ResolveTargetTable = GetActiveBomTable()
+
+        Case PickerTarget_PO
+            Set ws = wb.Worksheets(SH_POLINES)
+            Set ResolveTargetTable = ws.ListObjects(LO_POLINES)
+            RequireColumn ResolveTargetTable, "CompID"
+            RequireColumn ResolveTargetTable, "OurPN"
+            RequireColumn ResolveTargetTable, "OurRev"
+            RequireColumn ResolveTargetTable, "Description"
+            RequireColumn ResolveTargetTable, "UOM"
+            RequireColumn ResolveTargetTable, "POQuantity"
+
+        Case PickerTarget_INV
+            Set ws = wb.Worksheets(SH_INV)
+            Set ResolveTargetTable = ws.ListObjects(LO_INV)
+            RequireColumn ResolveTargetTable, "CompID"
+            RequireColumn ResolveTargetTable, "OurPN"
+            RequireColumn ResolveTargetTable, "OurRev"
+            RequireColumn ResolveTargetTable, "ComponentDescription"
+            RequireColumn ResolveTargetTable, "UOM"
+            RequireColumn ResolveTargetTable, "ADD/SUBTRACT"
+
+        Case Else
+            Err.Raise vbObjectError + 8601, "ResolveTargetTable", "Unsupported picker target context."
+    End Select
+End Function
+
+Private Sub WriteComponentToTarget(ByVal loTarget As ListObject, ByVal targetContext As PickerTargetContext, _
+                                   ByVal compId As String, ByVal pn As String, ByVal rev As String, _
+                                   ByVal desc As String, ByVal uom As String, ByVal qtyVal As Double, ByVal notes As String)
+    If qtyVal <= 0 Then Exit Sub
+
+    Select Case targetContext
+        Case PickerTarget_BOM
+            Bom_UpsertComponent loTarget, compId, pn, rev, desc, uom, qtyVal, notes
+
+        Case PickerTarget_PO
+            POLine_AppendComponent loTarget, compId, pn, rev, desc, uom, qtyVal, notes
+
+        Case PickerTarget_INV
+            Inv_AppendTransaction loTarget, compId, pn, rev, desc, uom, qtyVal, notes
+
+        Case Else
+            Err.Raise vbObjectError + 8602, "WriteComponentToTarget", "Unsupported picker target context."
+    End Select
+End Sub
+
+Private Function GetSelectedPickerRowIndices(ByVal loPick As ListObject) As Collection
+    Dim sel As Range
+    Dim selInTable As Range
+    Dim area As Range
+    Dim rowCell As Range
+    Dim dicRows As Object
+    Dim key As Variant
+    Dim rowIndex As Long
+
+    Set GetSelectedPickerRowIndices = New Collection
+
+    If loPick Is Nothing Then Exit Function
+    If loPick.DataBodyRange Is Nothing Then Exit Function
+
+    Set sel = Selection
+    If sel Is Nothing Then Exit Function
+
+    Set selInTable = Intersect(sel, loPick.DataBodyRange)
+    If selInTable Is Nothing Then Exit Function
+
+    Set dicRows = CreateObject("Scripting.Dictionary")
+    dicRows.CompareMode = vbTextCompare
+
+    For Each area In selInTable.Areas
+        For Each rowCell In area.Cells
+            dicRows(CStr(rowCell.Row)) = True
+        Next rowCell
+    Next area
+
+    For Each key In dicRows.Keys
+        rowIndex = CLng(key) - loPick.DataBodyRange.Row + 1
+        If rowIndex >= 1 And rowIndex <= loPick.DataBodyRange.Rows.Count Then
+            GetSelectedPickerRowIndices.Add rowIndex
+        End If
+    Next key
+End Function
+
+Private Function ContextLabel(ByVal targetContext As PickerTargetContext) As String
+    Select Case targetContext
+        Case PickerTarget_BOM: ContextLabel = "BOM"
+        Case PickerTarget_PO: ContextLabel = "PO Lines"
+        Case PickerTarget_INV: ContextLabel = "Inventory"
+        Case Else: ContextLabel = "Unknown"
+    End Select
+End Function
 
 '==========================
 ' Core logic
 '==========================
-
 Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
     Const PROC_NAME As String = "M_Data_BOMs_Picker.EnsurePickerSheetAndTable"
 
@@ -186,21 +400,25 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
         ws.Name = SH_PICKERS
     End If
 
-    ' Layout labels + defaults (idempotent)
-    ws.Range("A1").value = "Component Picker"
-    ws.Range("A2").value = "Search (Description contains)"
-    ws.Range("A3").value = "Revision (optional exact match)"
-    ws.Range("A4").value = "Active only (TRUE/FALSE)"
-    ws.Range("A5").value = "Max results"
+    ws.Range("A1").Value = "Component Picker"
+    ws.Range("A2").Value = "Search (Description/Notes/PN/CompID contains)"
+    ws.Range("A3").Value = "Revision (optional exact match)"
+    ws.Range("A4").Value = "Active only (TRUE/FALSE)"
+    ws.Range("A5").Value = "Max results"
+    ws.Range("A6").Value = "CompID (optional exact match)"
+    ws.Range("A7").Value = "Supplier (optional exact match; dropdown)"
+    ws.Range("A8").Value = "Description"
 
-    If Len(SafeText(ws.Range(CELL_SEARCH).value)) = 0 Then ws.Range(CELL_SEARCH).value = ""
-    If Len(SafeText(ws.Range(CELL_REV).value)) = 0 Then ws.Range(CELL_REV).value = ""
-    If Len(SafeText(ws.Range(CELL_ACTIVEONLY).value)) = 0 Then ws.Range(CELL_ACTIVEONLY).value = IIf(DEFAULT_ACTIVEONLY, "TRUE", "FALSE")
-    If Len(SafeText(ws.Range(CELL_MAXRESULTS).value)) = 0 Then ws.Range(CELL_MAXRESULTS).value = DEFAULT_MAXRESULTS
+    If Len(SafeText(ws.Range(CELL_SEARCH).Value)) = 0 Then ws.Range(CELL_SEARCH).Value = ""
+    If Len(SafeText(ws.Range(CELL_REV).Value)) = 0 Then ws.Range(CELL_REV).Value = ""
+    If Len(SafeText(ws.Range(CELL_ACTIVEONLY).Value)) = 0 Then ws.Range(CELL_ACTIVEONLY).Value = IIf(DEFAULT_ACTIVEONLY, "TRUE", "FALSE")
+    If Len(SafeText(ws.Range(CELL_MAXRESULTS).Value)) = 0 Then ws.Range(CELL_MAXRESULTS).Value = DEFAULT_MAXRESULTS
+    If Len(SafeText(ws.Range(CELL_COMPID).Value)) = 0 Then ws.Range(CELL_COMPID).Value = ""
+    If Len(SafeText(ws.Range(CELL_SUPPLIER).Value)) = 0 Then ws.Range(CELL_SUPPLIER).Value = ""
+    If Len(SafeText(ws.Range(CELL_DESCRIPTION).Value)) = 0 Then ws.Range(CELL_DESCRIPTION).Value = ""
 
-    ws.Range("A7").value = "Results (filter/sort normally, then select rows and run Add Selected):"
+    ws.Range("A9").Value = "Results (filter/sort, select rows, then run add macro):"
 
-    ' Ensure results table exists
     Set lo = Nothing
     On Error Resume Next
     Set lo = ws.ListObjects(LO_PICK_RESULTS)
@@ -211,12 +429,10 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
     If lo Is Nothing Then
         Set rngTopLeft = ws.Range(RESULTS_TOPLEFT)
 
-        ' Write headers
         For i = LBound(headers) To UBound(headers)
-            rngTopLeft.Offset(0, i).value = headers(i)
+            rngTopLeft.Offset(0, i).Value = headers(i)
         Next i
 
-        ' Create a 2-row table (headers + one blank row)
         Dim rngTable As Range
         Set rngTable = ws.Range(rngTopLeft, rngTopLeft.Offset(1, UBound(headers)))
 
@@ -224,10 +440,8 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
         lo.Name = LO_PICK_RESULTS
         lo.TableStyle = "TableStyleLight9"
 
-        ' Clear the single blank data row
         If Not lo.DataBodyRange Is Nothing Then lo.DataBodyRange.ClearContents
     Else
-        ' Validate headers match (fail fast if user edited them)
         For i = LBound(headers) To UBound(headers)
             If i + 1 > lo.ListColumns.Count Then
                 Err.Raise vbObjectError + 8001, PROC_NAME, "Picker table header mismatch. Recreate TBL_PICK_RESULTS."
@@ -238,10 +452,84 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
         Next i
     End If
 
+    RebuildPickerDropdownLists wb, ws
+
     Exit Sub
 
 EH:
     Err.Raise Err.Number, PROC_NAME, Err.Description
+End Sub
+
+Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Worksheet)
+    Dim loComps As ListObject
+    Dim idxSupplier As Long, idxDesc As Long, idxRS As Long
+    Dim arr As Variant
+    Dim r As Long
+    Dim dicSup As Object, dicDesc As Object
+    Dim supTop As Range, descTop As Range
+    Dim key As Variant
+    Dim outRow As Long
+
+    On Error GoTo EH
+
+    Set loComps = wb.Worksheets(SH_COMPS).ListObjects(LO_COMPS)
+    If loComps.DataBodyRange Is Nothing Then Exit Sub
+
+    idxSupplier = GetColIndex(loComps, "SupplierName")
+    idxDesc = GetColIndex(loComps, "ComponentDescription")
+    idxRS = GetColIndex(loComps, "RevStatus")
+    If idxDesc = 0 Or idxRS = 0 Then Exit Sub
+
+    arr = loComps.DataBodyRange.Value
+    Set dicSup = CreateObject("Scripting.Dictionary")
+    dicSup.CompareMode = vbTextCompare
+    Set dicDesc = CreateObject("Scripting.Dictionary")
+    dicDesc.CompareMode = vbTextCompare
+
+    For r = 1 To UBound(arr, 1)
+        If StrComp(SafeText(arr(r, idxRS)), ACTIVE_LABEL, vbTextCompare) = 0 Then
+            If idxSupplier > 0 Then
+                If Len(SafeText(arr(r, idxSupplier))) > 0 Then dicSup(SafeText(arr(r, idxSupplier))) = True
+            End If
+            If Len(SafeText(arr(r, idxDesc))) > 0 Then dicDesc(SafeText(arr(r, idxDesc))) = True
+        End If
+    Next r
+
+    wsPick.Range("J1").Value = "SupplierOptions"
+    wsPick.Range("K1").Value = "DescriptionOptions"
+    wsPick.Range("J2:J5000").ClearContents
+    wsPick.Range("K2:K5000").ClearContents
+
+    Set supTop = wsPick.Range(HELPER_SUPPLIER_TOPLEFT)
+    outRow = 0
+    For Each key In dicSup.Keys
+        outRow = outRow + 1
+        supTop.Offset(outRow - 1, 0).Value = CStr(key)
+    Next key
+
+    Set descTop = wsPick.Range(HELPER_DESCRIPTION_TOPLEFT)
+    outRow = 0
+    For Each key In dicDesc.Keys
+        outRow = outRow + 1
+        descTop.Offset(outRow - 1, 0).Value = CStr(key)
+    Next key
+
+    ApplyValidationListFromRange wsPick.Range(CELL_SUPPLIER), wsPick.Range("J2:J5000")
+    ApplyValidationListFromRange wsPick.Range(CELL_DESCRIPTION), wsPick.Range("K2:K5000")
+    Exit Sub
+
+EH:
+    ' Non-fatal helper; picker remains usable without dropdowns
+End Sub
+
+Private Sub ApplyValidationListFromRange(ByVal targetCell As Range, ByVal listRange As Range)
+    On Error Resume Next
+    targetCell.Validation.Delete
+    On Error GoTo 0
+
+    targetCell.Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:=xlBetween, Formula1:="='" & targetCell.Worksheet.Name & "'!" & listRange.Address
+    targetCell.Validation.IgnoreBlank = True
+    targetCell.Validation.InCellDropdown = True
 End Sub
 
 Private Sub RefreshPickerResults(ByVal wb As Workbook)
@@ -254,21 +542,27 @@ Private Sub RefreshPickerResults(ByVal wb As Workbook)
     Dim revFilter As String
     Dim activeOnly As Boolean
     Dim maxResults As Long
+    Dim compIdFilter As String
+    Dim supplierFilter As String
+    Dim descExactFilter As String
 
     On Error GoTo EH
 
     Set wsPick = wb.Worksheets(SH_PICKERS)
     Set loPick = wsPick.ListObjects(LO_PICK_RESULTS)
 
-    searchText = LCase$(Trim$(SafeText(wsPick.Range(CELL_SEARCH).value)))
-    revFilter = Trim$(SafeText(wsPick.Range(CELL_REV).value))
-    activeOnly = ParseBoolDefault(wsPick.Range(CELL_ACTIVEONLY).value, DEFAULT_ACTIVEONLY)
-    maxResults = ParseLongDefault(wsPick.Range(CELL_MAXRESULTS).value, DEFAULT_MAXRESULTS)
+    searchText = LCase$(Trim$(SafeText(wsPick.Range(CELL_SEARCH).Value)))
+    revFilter = Trim$(SafeText(wsPick.Range(CELL_REV).Value))
+    activeOnly = ParseBoolDefault(wsPick.Range(CELL_ACTIVEONLY).Value, DEFAULT_ACTIVEONLY)
+    maxResults = ParseLongDefault(wsPick.Range(CELL_MAXRESULTS).Value, DEFAULT_MAXRESULTS)
+    compIdFilter = Trim$(SafeText(wsPick.Range(CELL_COMPID).Value))
+    supplierFilter = Trim$(SafeText(wsPick.Range(CELL_SUPPLIER).Value))
+    descExactFilter = Trim$(SafeText(wsPick.Range(CELL_DESCRIPTION).Value))
     If maxResults < 1 Then maxResults = DEFAULT_MAXRESULTS
 
     Dim outArr As Variant
     Dim outCount As Long
-    outArr = Picker_GetResults(wb, searchText, revFilter, activeOnly, maxResults, outCount)
+    outArr = Picker_GetResults(wb, searchText, revFilter, activeOnly, maxResults, outCount, compIdFilter, supplierFilter, descExactFilter)
 
     If outCount = 0 Then
         ClearPickResults loPick
@@ -288,13 +582,16 @@ Public Function Picker_GetResults( _
     ByVal revFilter As String, _
     ByVal activeOnly As Boolean, _
     ByVal maxResults As Long, _
-    ByRef outCount As Long) As Variant
+    ByRef outCount As Long, _
+    Optional ByVal compIdFilter As String = "", _
+    Optional ByVal supplierFilter As String = "", _
+    Optional ByVal descExactFilter As String = "") As Variant
     Const PROC_NAME As String = "M_Data_BOMs_Picker.Picker_GetResults"
 
     Dim wsComps As Worksheet
     Dim loComps As ListObject
 
-    Dim idxCompID As Long, idxPn As Long, idxRev As Long, idxDesc As Long, idxUom As Long, idxNotes As Long, idxRS As Long
+    Dim idxCompID As Long, idxPn As Long, idxRev As Long, idxDesc As Long, idxUom As Long, idxNotes As Long, idxRS As Long, idxSupplier As Long
     Dim compsArr As Variant
     Dim outArr() As Variant
     Dim r As Long
@@ -311,6 +608,7 @@ Public Function Picker_GetResults( _
     idxUom = GetColIndex(loComps, "UOM")
     idxNotes = GetColIndex(loComps, "ComponentNotes")
     idxRS = GetColIndex(loComps, "RevStatus")
+    idxSupplier = GetColIndex(loComps, "SupplierName")
 
     If idxCompID = 0 Or idxPn = 0 Or idxRev = 0 Or idxDesc = 0 Or idxUom = 0 Or idxNotes = 0 Or idxRS = 0 Then
         Err.Raise vbObjectError + 8101, PROC_NAME, "Comps.TBL_COMPS missing one or more required headers."
@@ -322,18 +620,20 @@ Public Function Picker_GetResults( _
         Exit Function
     End If
 
-    compsArr = loComps.DataBodyRange.value
+    compsArr = loComps.DataBodyRange.Value
     If maxResults < 1 Then maxResults = DEFAULT_MAXRESULTS
     ReDim outArr(1 To maxResults, 1 To 7)
 
     For r = 1 To UBound(compsArr, 1)
-        Dim cDesc As String, cNotes As String, cPN As String, cRev As String, cRS As String
+        Dim cId As String, cDesc As String, cNotes As String, cPN As String, cRev As String, cRS As String, cSupplier As String
 
+        cId = SafeText(compsArr(r, idxCompID))
         cDesc = SafeText(compsArr(r, idxDesc))
         cNotes = SafeText(compsArr(r, idxNotes))
         cPN = SafeText(compsArr(r, idxPn))
         cRev = SafeText(compsArr(r, idxRev))
         cRS = SafeText(compsArr(r, idxRS))
+        If idxSupplier > 0 Then cSupplier = SafeText(compsArr(r, idxSupplier))
 
         If activeOnly Then
             If StrComp(cRS, ACTIVE_LABEL, vbTextCompare) <> 0 Then GoTo NextRow
@@ -342,11 +642,23 @@ Public Function Picker_GetResults( _
         If Len(revFilter) > 0 Then
             If StrComp(cRev, revFilter, vbTextCompare) <> 0 Then GoTo NextRow
         End If
+        If Len(compIdFilter) > 0 Then
+            If StrComp(cId, compIdFilter, vbTextCompare) <> 0 Then GoTo NextRow
+        End If
+
+        If Len(supplierFilter) > 0 Then
+            If StrComp(cSupplier, supplierFilter, vbTextCompare) <> 0 Then GoTo NextRow
+        End If
+
+        If Len(descExactFilter) > 0 Then
+            If StrComp(cDesc, descExactFilter, vbTextCompare) <> 0 Then GoTo NextRow
+        End If
 
         If Len(searchText) > 0 Then
             If InStr(1, LCase$(cDesc), searchText, vbTextCompare) = 0 And _
                InStr(1, LCase$(cNotes), searchText, vbTextCompare) = 0 And _
-               InStr(1, LCase$(cPN), searchText, vbTextCompare) = 0 Then
+               InStr(1, LCase$(cPN), searchText, vbTextCompare) = 0 And _
+               InStr(1, LCase$(cId), searchText, vbTextCompare) = 0 Then
                 GoTo NextRow
             End If
         End If
@@ -376,123 +688,12 @@ EH:
     Err.Raise Err.Number, PROC_NAME, Err.Description
 End Function
 
-Private Sub AddSelectedPickerRowsToActiveBOM(ByVal wb As Workbook)
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.AddSelectedPickerRowsToActiveBOM"
-
-    Dim wsPick As Worksheet
-    Dim loPick As ListObject
-    Dim sel As Range
-    Dim selInTable As Range
-    Dim area As Range
-    Dim rowCell As Range
-
-    Dim loBom As ListObject
-
-    Dim qtyPer As Double
-    qtyPer = PromptDouble_Simple("Enter QtyPer (> 0) to apply to EACH selected component:", "Add Selected Components", 1#)
-    If qtyPer <= 0 Then Exit Sub
-
-    On Error GoTo EH
-
-    Set wsPick = wb.Worksheets(SH_PICKERS)
-    Set loPick = wsPick.ListObjects(LO_PICK_RESULTS)
-
-    If loPick.DataBodyRange Is Nothing Then
-        MsgBox "No picker results to add.", vbInformation, "Add Selected Components"
-        Exit Sub
-    End If
-
-    Set sel = Selection
-    If sel Is Nothing Then
-        MsgBox "Select one or more rows in the picker results table first.", vbExclamation, "Add Selected Components"
-        Exit Sub
-    End If
-
-    Set selInTable = Intersect(sel, loPick.DataBodyRange)
-    If selInTable Is Nothing Then
-        MsgBox "Your selection is not inside the picker results table (data rows).", vbExclamation, "Add Selected Components"
-        Exit Sub
-    End If
-
-    ' Active BOM is the active sheet at run time
-    Set loBom = GetActiveBomTable()
-
-    ' Iterate distinct rows in selection (by row index)
-    Dim dicRows As Object
-    Set dicRows = CreateObject("Scripting.Dictionary")
-    dicRows.compareMode = vbTextCompare
-
-    For Each area In selInTable.Areas
-        For Each rowCell In area.Cells
-            dicRows(CStr(rowCell.row)) = True
-        Next rowCell
-    Next area
-
-    Dim key As Variant
-    For Each key In dicRows.Keys
-        Dim pickRowIndex As Long
-        pickRowIndex = CLng(key) - loPick.DataBodyRange.row + 1 ' 1-based within DataBodyRange
-
-        If pickRowIndex >= 1 And pickRowIndex <= loPick.DataBodyRange.rows.Count Then
-            Dim compId As String, pn As String, rev As String, desc As String, uom As String, notes As String, rs As String
-
-            compId = SafeText(loPick.ListColumns("CompID").DataBodyRange.Cells(pickRowIndex, 1).value)
-            pn = SafeText(loPick.ListColumns("OurPN").DataBodyRange.Cells(pickRowIndex, 1).value)
-            rev = SafeText(loPick.ListColumns("OurRev").DataBodyRange.Cells(pickRowIndex, 1).value)
-            desc = SafeText(loPick.ListColumns("ComponentDescription").DataBodyRange.Cells(pickRowIndex, 1).value)
-            uom = SafeText(loPick.ListColumns("UOM").DataBodyRange.Cells(pickRowIndex, 1).value)
-            notes = SafeText(loPick.ListColumns("ComponentNotes").DataBodyRange.Cells(pickRowIndex, 1).value)
-            rs = SafeText(loPick.ListColumns("RevStatus").DataBodyRange.Cells(pickRowIndex, 1).value)
-
-            Picker_AddComponentToActiveBOM loBom, compId, pn, rev, desc, uom, qtyPer, notes, rs
-        End If
-    Next key
-
-    MsgBox "Selected components processed.", vbInformation, "Add Selected Components"
-    Exit Sub
-
-EH:
-    Err.Raise Err.Number, PROC_NAME, Err.Description
-End Sub
-
-Public Sub Picker_AddComponentToActiveBOM( _
-    ByVal loBom As ListObject, _
-    ByVal compId As String, _
-    ByVal pn As String, _
-    ByVal rev As String, _
-    ByVal desc As String, _
-    ByVal uom As String, _
-    ByVal qtyPer As Double, _
-    ByVal notes As String, _
-    ByVal revStatus As String)
-    Const PROC_NAME As String = "M_Data_BOMs_Picker.Picker_AddComponentToActiveBOM"
-
-    On Error GoTo EH
-
-    If qtyPer <= 0 Then
-        MsgBox "QtyPer must be > 0.", vbExclamation, "Component Picker"
-        Exit Sub
-    End If
-
-    If StrComp(revStatus, ACTIVE_LABEL, vbTextCompare) <> 0 Then
-        MsgBox "Skipping non-active component: " & pn & " / " & rev & " (RevStatus=" & revStatus & ")", vbExclamation, "Component Picker"
-        Exit Sub
-    End If
-
-    Bom_UpsertComponent loBom, compId, pn, rev, desc, uom, qtyPer, notes
-    Exit Sub
-
-EH:
-    MsgBox "Add component failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
-End Sub
-
 Public Function GetActiveBomTable_Public() As ListObject
     Set GetActiveBomTable_Public = GetActiveBomTable()
 End Function
 
 '==========================
-' BOM upsert (deterministic)
+' Target writers
 '==========================
 Private Sub Bom_UpsertComponent(ByVal loBom As ListObject, ByVal compId As String, ByVal pn As String, ByVal rev As String, _
                                ByVal desc As String, ByVal uom As String, ByVal qtyPer As Double, ByVal compNotes As String)
@@ -506,8 +707,8 @@ Private Sub Bom_UpsertComponent(ByVal loBom As ListObject, ByVal compId As Strin
     If idxPn = 0 Or idxRev = 0 Or idxQty = 0 Then Err.Raise vbObjectError + 8400, "Bom_UpsertComponent", "BOM table missing OurPN/OurRev/QtyPer."
 
     If Not loBom.DataBodyRange Is Nothing Then
-        arrPn = loBom.ListColumns(idxPn).DataBodyRange.value
-        arrRev = loBom.ListColumns(idxRev).DataBodyRange.value
+        arrPn = loBom.ListColumns(idxPn).DataBodyRange.Value
+        arrRev = loBom.ListColumns(idxRev).DataBodyRange.Value
 
         For i = 1 To UBound(arrPn, 1)
             If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
@@ -515,13 +716,13 @@ Private Sub Bom_UpsertComponent(ByVal loBom As ListObject, ByVal compId As Strin
 
                 Dim currentQty As Double
                 currentQty = 0#
-                If IsNumeric(loBom.ListColumns(idxQty).DataBodyRange.Cells(i, 1).value) Then
-                    currentQty = CDbl(loBom.ListColumns(idxQty).DataBodyRange.Cells(i, 1).value)
+                If IsNumeric(loBom.ListColumns(idxQty).DataBodyRange.Cells(i, 1).Value) Then
+                    currentQty = CDbl(loBom.ListColumns(idxQty).DataBodyRange.Cells(i, 1).Value)
                 End If
-                loBom.ListColumns(idxQty).DataBodyRange.Cells(i, 1).value = currentQty + qtyPer
+                loBom.ListColumns(idxQty).DataBodyRange.Cells(i, 1).Value = currentQty + qtyPer
 
-                If ColumnExists(loBom, "UpdatedAt") Then loBom.ListColumns(GetColIndex(loBom, "UpdatedAt")).DataBodyRange.Cells(i, 1).value = Now
-                If ColumnExists(loBom, "UpdatedBy") Then loBom.ListColumns(GetColIndex(loBom, "UpdatedBy")).DataBodyRange.Cells(i, 1).value = GetUserNameSafe()
+                If ColumnExists(loBom, "UpdatedAt") Then loBom.ListColumns(GetColIndex(loBom, "UpdatedAt")).DataBodyRange.Cells(i, 1).Value = Now
+                If ColumnExists(loBom, "UpdatedBy") Then loBom.ListColumns(GetColIndex(loBom, "UpdatedBy")).DataBodyRange.Cells(i, 1).Value = GetUserNameSafe()
                 Exit Sub
             End If
         Next i
@@ -544,41 +745,79 @@ Private Sub Bom_UpsertComponent(ByVal loBom As ListObject, ByVal compId As Strin
     If ColumnExists(loBom, "UpdatedBy") Then SetByHeader loBom, lr, "UpdatedBy", GetUserNameSafe()
 End Sub
 
+Private Sub POLine_AppendComponent(ByVal loPo As ListObject, ByVal compId As String, ByVal pn As String, ByVal rev As String, _
+                                   ByVal desc As String, ByVal uom As String, ByVal qtyVal As Double, ByVal compNotes As String)
+    Dim lr As ListRow
+
+    Set lr = loPo.ListRows.Add
+
+    SetByHeader loPo, lr, "CompID", compId
+    SetByHeader loPo, lr, "OurPN", pn
+    SetByHeader loPo, lr, "OurRev", rev
+    SetByHeader loPo, lr, "Description", desc
+    SetByHeader loPo, lr, "UOM", uom
+    SetByHeader loPo, lr, "POQuantity", qtyVal
+
+    If ColumnExists(loPo, "POLineComment") Then SetByHeader loPo, lr, "POLineComment", compNotes
+    If ColumnExists(loPo, "CreatedAt") Then SetByHeader loPo, lr, "CreatedAt", Now
+    If ColumnExists(loPo, "CreatedBy") Then SetByHeader loPo, lr, "CreatedBy", GetUserNameSafe()
+    If ColumnExists(loPo, "UpdatedAt") Then SetByHeader loPo, lr, "UpdatedAt", Now
+    If ColumnExists(loPo, "UpdatedBy") Then SetByHeader loPo, lr, "UpdatedBy", GetUserNameSafe()
+End Sub
+
+Private Sub Inv_AppendTransaction(ByVal loInv As ListObject, ByVal compId As String, ByVal pn As String, ByVal rev As String, _
+                                  ByVal desc As String, ByVal uom As String, ByVal qtyVal As Double, ByVal compNotes As String)
+    Dim lr As ListRow
+    Dim signedDelta As Double
+
+    signedDelta = qtyVal
+
+    Set lr = loInv.ListRows.Add
+
+    SetByHeader loInv, lr, "CompID", compId
+    SetByHeader loInv, lr, "OurPN", pn
+    SetByHeader loInv, lr, "OurRev", rev
+    SetByHeader loInv, lr, "ComponentDescription", desc
+    SetByHeader loInv, lr, "UOM", uom
+    SetByHeader loInv, lr, "ADD/SUBTRACT", signedDelta
+
+    If ColumnExists(loInv, "CreatedAt") Then SetByHeader loInv, lr, "CreatedAt", Now
+    If ColumnExists(loInv, "CreatedBy") Then SetByHeader loInv, lr, "CreatedBy", GetUserNameSafe()
+    If ColumnExists(loInv, "UpdatedAt") Then SetByHeader loInv, lr, "UpdatedAt", Now
+    If ColumnExists(loInv, "UpdatedBy") Then SetByHeader loInv, lr, "UpdatedBy", GetUserNameSafe()
+
+    If ColumnExists(loInv, "ComponentNotes") Then SetByHeader loInv, lr, "ComponentNotes", compNotes
+End Sub
+
 '==========================
 ' Picker table writers
 '==========================
 Private Sub ClearPickResults(ByVal loPick As ListObject)
-    If Not loPick.DataBodyRange Is Nothing Then
-        loPick.DataBodyRange.Delete
-    End If
+    If Not loPick.DataBodyRange Is Nothing Then loPick.DataBodyRange.Delete
 End Sub
 
 Private Sub WritePickResults(ByVal loPick As ListObject, ByRef outArr As Variant, ByVal outCount As Long)
-    Dim ws As Worksheet
-    Set ws = loPick.Parent
+    On Error GoTo CleanFail
 
     Application.ScreenUpdating = False
 
-    ' Clear existing rows
-    If Not loPick.DataBodyRange Is Nothing Then
-        loPick.DataBodyRange.Delete
-    End If
+    If Not loPick.DataBodyRange Is Nothing Then loPick.DataBodyRange.Delete
+    If outCount <= 0 Then GoTo CleanExit
 
-    If outCount <= 0 Then
-        Application.ScreenUpdating = True
-        Exit Sub
-    End If
-
-    ' Add required rows
     Dim i As Long
     For i = 1 To outCount
         loPick.ListRows.Add
     Next i
 
-    ' Write values in one shot
-    loPick.DataBodyRange.value = Slice2D(outArr, outCount, 7)
+    loPick.DataBodyRange.Value = Slice2D(outArr, outCount, 7)
 
+CleanExit:
     Application.ScreenUpdating = True
+    Exit Sub
+
+CleanFail:
+    Application.ScreenUpdating = True
+    Err.Raise Err.Number, "WritePickResults", Err.Description
 End Sub
 
 Private Function Slice2D(ByRef src As Variant, ByVal rows As Long, ByVal cols As Long) As Variant
@@ -592,6 +831,63 @@ Private Function Slice2D(ByRef src As Variant, ByVal rows As Long, ByVal cols As
     Next r
     Slice2D = out
 End Function
+
+'==========================
+' Integrity checks
+'==========================
+Private Sub ValidateUniqueActiveMappings(ByVal wb As Workbook)
+    Const PROC_NAME As String = "ValidateUniqueActiveMappings"
+
+    Dim loComps As ListObject
+    Dim idxId As Long, idxPn As Long, idxRev As Long, idxRS As Long
+    Dim arr As Variant
+    Dim i As Long
+    Dim keyPnRev As String
+    Dim keyCompId As String
+    Dim dicPnRev As Object
+    Dim dicCompId As Object
+
+    Set loComps = wb.Worksheets(SH_COMPS).ListObjects(LO_COMPS)
+    If loComps.DataBodyRange Is Nothing Then Exit Sub
+
+    idxId = GetColIndex(loComps, "CompID")
+    idxPn = GetColIndex(loComps, "OurPN")
+    idxRev = GetColIndex(loComps, "OurRev")
+    idxRS = GetColIndex(loComps, "RevStatus")
+
+    If idxId = 0 Or idxPn = 0 Or idxRev = 0 Or idxRS = 0 Then
+        Err.Raise vbObjectError + 8701, PROC_NAME, "Comps table missing keys for uniqueness validation."
+    End If
+
+    arr = loComps.DataBodyRange.Value
+
+    Set dicPnRev = CreateObject("Scripting.Dictionary")
+    dicPnRev.CompareMode = vbTextCompare
+
+    Set dicCompId = CreateObject("Scripting.Dictionary")
+    dicCompId.CompareMode = vbTextCompare
+
+    For i = 1 To UBound(arr, 1)
+        If StrComp(SafeText(arr(i, idxRS)), ACTIVE_LABEL, vbTextCompare) = 0 Then
+            keyPnRev = UCase$(SafeText(arr(i, idxPn))) & "|" & UCase$(SafeText(arr(i, idxRev)))
+            keyCompId = UCase$(SafeText(arr(i, idxId)))
+
+            If Len(keyPnRev) > 1 Then
+                If dicPnRev.Exists(keyPnRev) Then
+                    Err.Raise vbObjectError + 8702, PROC_NAME, "Duplicate active PN+Rev found in Comps: " & keyPnRev
+                End If
+                dicPnRev(keyPnRev) = True
+            End If
+
+            If Len(keyCompId) > 0 Then
+                If dicCompId.Exists(keyCompId) Then
+                    Err.Raise vbObjectError + 8703, PROC_NAME, "Duplicate active CompID found in Comps: " & keyCompId
+                End If
+                dicCompId(keyCompId) = True
+            End If
+        End If
+    Next i
+End Sub
 
 '==========================
 ' Utilities / guards
@@ -675,13 +971,13 @@ Private Function Comps_LookupActive(ByVal loComps As ListObject, ByVal pn As Str
 
     If idxId = 0 Or idxPn = 0 Or idxRev = 0 Or idxDesc = 0 Or idxUom = 0 Or idxNotes = 0 Or idxRS = 0 Then Exit Function
 
-    arrId = loComps.ListColumns(idxId).DataBodyRange.value
-    arrPn = loComps.ListColumns(idxPn).DataBodyRange.value
-    arrRev = loComps.ListColumns(idxRev).DataBodyRange.value
-    arrDesc = loComps.ListColumns(idxDesc).DataBodyRange.value
-    arrUom = loComps.ListColumns(idxUom).DataBodyRange.value
-    arrNotes = loComps.ListColumns(idxNotes).DataBodyRange.value
-    arrRS = loComps.ListColumns(idxRS).DataBodyRange.value
+    arrId = loComps.ListColumns(idxId).DataBodyRange.Value
+    arrPn = loComps.ListColumns(idxPn).DataBodyRange.Value
+    arrRev = loComps.ListColumns(idxRev).DataBodyRange.Value
+    arrDesc = loComps.ListColumns(idxDesc).DataBodyRange.Value
+    arrUom = loComps.ListColumns(idxUom).DataBodyRange.Value
+    arrNotes = loComps.ListColumns(idxNotes).DataBodyRange.Value
+    arrRS = loComps.ListColumns(idxRS).DataBodyRange.Value
 
     For i = 1 To UBound(arrPn, 1)
         If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
@@ -708,7 +1004,7 @@ Private Sub SetByHeader(ByVal lo As ListObject, ByVal lr As ListRow, ByVal heade
     Dim idx As Long
     idx = GetColIndex(lo, header)
     If idx = 0 Then Err.Raise vbObjectError + 8501, "SetByHeader", "Missing column '" & header & "' in table '" & lo.Name & "'."
-    lr.Range.Cells(1, idx).value = v
+    lr.Range.Cells(1, idx).Value = v
 End Sub
 
 Private Function SafeText(ByVal v As Variant) As String
@@ -761,10 +1057,16 @@ Private Function PromptDouble_Simple(ByVal prompt As String, ByVal title As Stri
     PromptDouble_Simple = CDbl(s)
 End Function
 
+Private Function PromptYesNo(ByVal prompt As String, ByVal title As String, ByVal defaultYes As Boolean) As Boolean
+    Dim btn As VbMsgBoxResult
+    btn = MsgBox(prompt, vbQuestion + vbYesNo + IIf(defaultYes, vbDefaultButton1, vbDefaultButton2), title)
+    PromptYesNo = (btn = vbYes)
+End Function
+
 Private Function GetUserNameSafe() As String
     Dim u As String
     u = Trim$(Environ$("Username"))
-    If Len(u) = 0 Then u = Application.userName
+    If Len(u) = 0 Then u = Application.UserName
     If Len(Trim$(u)) = 0 Then u = "UNKNOWN"
     GetUserNameSafe = u
 End Function
