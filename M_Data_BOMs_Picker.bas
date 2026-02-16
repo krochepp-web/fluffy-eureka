@@ -169,17 +169,6 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
 
     Set wb = ThisWorkbook
     Set loBom = ResolveTargetTable(wb, PickerTarget_BOM)
-
-    bomId = M_Data_BOMs_Status.GetBomIdByTabName(loBom.Parent.Name)
-    If Len(bomId) = 0 Then
-        MsgBox "Could not resolve BOMID for active BOM sheet.", vbExclamation, "Component Picker"
-        Exit Sub
-    End If
-    If Not M_Data_BOMs_Status.CanEditBom(bomId) Then
-        MsgBox M_Data_BOMs_Status.GetBomEditDisabledMessage(bomId), vbExclamation, "Component Picker"
-        Exit Sub
-    End If
-
     Set wsComps = wb.Worksheets(SH_COMPS)
     Set loComps = wsComps.ListObjects(LO_COMPS)
 
@@ -250,25 +239,12 @@ Private Sub AddPickedRowsToTarget(ByVal wb As Workbook, ByVal loPick As ListObje
 
     Dim compId As String, pn As String, rev As String, desc As String, uom As String, notes As String, rs As String
     Dim qtyVal As Double
-    Dim bomId As String
 
     On Error GoTo EH
 
     ValidateUniqueActiveMappings wb
 
     Set loTarget = ResolveTargetTable(wb, targetContext)
-
-    If targetContext = PickerTarget_BOM Then
-        bomId = M_Data_BOMs_Status.GetBomIdByTabName(loTarget.Parent.Name)
-        If Len(bomId) = 0 Then
-            MsgBox "Could not resolve BOMID for active BOM sheet.", vbExclamation, "Component Picker"
-            Exit Sub
-        End If
-        If Not M_Data_BOMs_Status.CanEditBom(bomId) Then
-            MsgBox M_Data_BOMs_Status.GetBomEditDisabledMessage(bomId), vbExclamation, "Component Picker"
-            Exit Sub
-        End If
-    End If
 
     For i = 1 To rowIndices.Count
         pickRowIndex = CLng(rowIndices(i))
@@ -432,7 +408,7 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
     ws.Range("A5").Value = "Max results"
     ws.Range("A6").Value = "CompID (optional exact match)"
     ws.Range("A7").Value = "Supplier (optional exact match; dropdown)"
-    ws.Range("A8").Value = "Description (optional exact match; dropdown)"
+    ws.Range("A8").Value = "Description"
 
     If Len(SafeText(ws.Range(CELL_SEARCH).Value)) = 0 Then ws.Range(CELL_SEARCH).Value = ""
     If Len(SafeText(ws.Range(CELL_REV).Value)) = 0 Then ws.Range(CELL_REV).Value = ""
