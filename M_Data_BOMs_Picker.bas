@@ -21,7 +21,7 @@ Option Explicit
 '         B5 = MaxResults (numeric)
 '       Results table:
 '         TBL_PICK_RESULTS with headers:
-'           CompID, OurPN, OurRev, ComponentDescription, UOM, ComponentNotes, RevStatus
+'           CompID, OurPN, OurRev, Description, UOM, ComponentNotes, RevStatus
 '
 '   - Targets by context:
 '       BOM: active sheet ListObject with BOM headers
@@ -79,8 +79,10 @@ Private Const CELL_DESCRIPTION As String = "B8"
 
 ' Picker top-left for results table
 Private Const RESULTS_TOPLEFT As String = "A10"
-Private Const HELPER_SUPPLIER_TOPLEFT As String = "J2"
-Private Const HELPER_DESCRIPTION_TOPLEFT As String = "K2"
+Private Const HELPER_COMPID_TOPLEFT As String = "J2"
+Private Const HELPER_SUPPLIER_TOPLEFT As String = "K2"
+Private Const HELPER_DESCRIPTION_TOPLEFT As String = "L2"
+Private Const HELPER_REV_TOPLEFT As String = "M2"
 
 ' Default settings
 Private Const DEFAULT_ACTIVEONLY As Boolean = True
@@ -238,6 +240,7 @@ Private Sub AddPickedRowsToTarget(ByVal wb As Workbook, ByVal loPick As ListObje
     Dim pickRowIndex As Long
 
     Dim compId As String, pn As String, rev As String, desc As String, uom As String, notes As String, rs As String
+    Dim pickDescHeader As String
     Dim qtyVal As Double
 
     On Error GoTo EH
@@ -245,6 +248,7 @@ Private Sub AddPickedRowsToTarget(ByVal wb As Workbook, ByVal loPick As ListObje
     ValidateUniqueActiveMappings wb
 
     Set loTarget = ResolveTargetTable(wb, targetContext)
+    pickDescHeader = PickerResultDescriptionHeader(loPick)
 
     For i = 1 To rowIndices.Count
         pickRowIndex = CLng(rowIndices(i))
@@ -252,7 +256,7 @@ Private Sub AddPickedRowsToTarget(ByVal wb As Workbook, ByVal loPick As ListObje
         compId = SafeText(loPick.ListColumns("CompID").DataBodyRange.Cells(pickRowIndex, 1).Value)
         pn = SafeText(loPick.ListColumns("OurPN").DataBodyRange.Cells(pickRowIndex, 1).Value)
         rev = SafeText(loPick.ListColumns("OurRev").DataBodyRange.Cells(pickRowIndex, 1).Value)
-        desc = SafeText(loPick.ListColumns("ComponentDescription").DataBodyRange.Cells(pickRowIndex, 1).Value)
+        desc = SafeText(loPick.ListColumns(pickDescHeader).DataBodyRange.Cells(pickRowIndex, 1).Value)
         uom = SafeText(loPick.ListColumns("UOM").DataBodyRange.Cells(pickRowIndex, 1).Value)
         notes = SafeText(loPick.ListColumns("ComponentNotes").DataBodyRange.Cells(pickRowIndex, 1).Value)
         rs = SafeText(loPick.ListColumns("RevStatus").DataBodyRange.Cells(pickRowIndex, 1).Value)
@@ -425,7 +429,7 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
     Set lo = ws.ListObjects(LO_PICK_RESULTS)
     On Error GoTo EH
 
-    headers = Array("CompID", "OurPN", "OurRev", "ComponentDescription", "UOM", "ComponentNotes", "RevStatus")
+    headers = Array("CompID", "OurPN", "OurRev", "Description", "UOM", "ComponentNotes", "RevStatus")
 
     If lo Is Nothing Then
         Set rngTopLeft = ws.Range(RESULTS_TOPLEFT)
@@ -489,13 +493,24 @@ Private Function ResetPickerResultsTable(ByVal ws As Worksheet, ByVal lo As List
     If Not ResetPickerResultsTable.DataBodyRange Is Nothing Then ResetPickerResultsTable.DataBodyRange.ClearContents
 End Function
 
+Private Function PickerResultDescriptionHeader(ByVal loPick As ListObject) As String
+    If GetColIndex(loPick, "Description") > 0 Then
+        PickerResultDescriptionHeader = "Description"
+    ElseIf GetColIndex(loPick, "ComponentDescription") > 0 Then
+        PickerResultDescriptionHeader = "ComponentDescription"
+    Else
+        Err.Raise vbObjectError + 8605, "PickerResultDescriptionHeader", _
+                  "Picker results table is missing Description column."
+    End If
+End Function
+
 Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Worksheet)
     Dim loComps As ListObject
-    Dim idxSupplier As Long, idxDesc As Long, idxRS As Long
+    Dim idxCompId As Long, idxSupplier As Long, idxDesc As Long, idxRev As Long, idxRS As Long
     Dim arr As Variant
     Dim r As Long
-    Dim dicSup As Object, dicDesc As Object
-    Dim supTop As Range, descTop As Range
+    Dim dicCompId As Object, dicSup As Object, dicDesc As Object, dicRev As Object
+    Dim compIdTop As Range, supTop As Range, descTop As Range, revTop As Range
     Dim key As Variant
     Dim outRow As Long
 
@@ -504,30 +519,48 @@ Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Wor
     Set loComps = wb.Worksheets(SH_COMPS).ListObjects(LO_COMPS)
     If loComps.DataBodyRange Is Nothing Then Exit Sub
 
+    idxCompId = GetColIndex(loComps, "CompID")
     idxSupplier = GetColIndex(loComps, "SupplierName")
     idxDesc = GetColIndex(loComps, "ComponentDescription")
+    idxRev = GetColIndex(loComps, "OurRev")
     idxRS = GetColIndex(loComps, "RevStatus")
-    If idxDesc = 0 Or idxRS = 0 Then Exit Sub
+    If idxCompId = 0 Or idxDesc = 0 Or idxRS = 0 Then Exit Sub
 
     arr = loComps.DataBodyRange.Value
+    Set dicCompId = CreateObject("Scripting.Dictionary")
+    dicCompId.CompareMode = vbTextCompare
     Set dicSup = CreateObject("Scripting.Dictionary")
     dicSup.CompareMode = vbTextCompare
     Set dicDesc = CreateObject("Scripting.Dictionary")
     dicDesc.CompareMode = vbTextCompare
+    Set dicRev = CreateObject("Scripting.Dictionary")
+    dicRev.CompareMode = vbTextCompare
 
     For r = 1 To UBound(arr, 1)
         If StrComp(SafeText(arr(r, idxRS)), ACTIVE_LABEL, vbTextCompare) = 0 Then
+            If Len(SafeText(arr(r, idxCompId))) > 0 Then dicCompId(SafeText(arr(r, idxCompId))) = True
             If idxSupplier > 0 Then
                 If Len(SafeText(arr(r, idxSupplier))) > 0 Then dicSup(SafeText(arr(r, idxSupplier))) = True
             End If
             If Len(SafeText(arr(r, idxDesc))) > 0 Then dicDesc(SafeText(arr(r, idxDesc))) = True
+            If idxRev > 0 Then
+                If Len(SafeText(arr(r, idxRev))) > 0 Then dicRev(SafeText(arr(r, idxRev))) = True
+            End If
         End If
     Next r
 
-    wsPick.Range("J1").Value = "SupplierOptions"
-    wsPick.Range("K1").Value = "DescriptionOptions"
-    wsPick.Range("J2:J5000").ClearContents
-    wsPick.Range("K2:K5000").ClearContents
+    wsPick.Range("J1").Value = "CompIDOptions"
+    wsPick.Range("K1").Value = "SupplierOptions"
+    wsPick.Range("L1").Value = "DescriptionOptions"
+    wsPick.Range("M1").Value = "RevisionOptions"
+    wsPick.Range("J2:M5000").ClearContents
+
+    Set compIdTop = wsPick.Range(HELPER_COMPID_TOPLEFT)
+    outRow = 0
+    For Each key In dicCompId.Keys
+        outRow = outRow + 1
+        compIdTop.Offset(outRow - 1, 0).Value = CStr(key)
+    Next key
 
     Set supTop = wsPick.Range(HELPER_SUPPLIER_TOPLEFT)
     outRow = 0
@@ -543,12 +576,32 @@ Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Wor
         descTop.Offset(outRow - 1, 0).Value = CStr(key)
     Next key
 
-    ApplyValidationListFromRange wsPick.Range(CELL_SUPPLIER), wsPick.Range("J2:J5000")
-    ApplyValidationListFromRange wsPick.Range(CELL_DESCRIPTION), wsPick.Range("K2:K5000")
+    Set revTop = wsPick.Range(HELPER_REV_TOPLEFT)
+    outRow = 0
+    For Each key In dicRev.Keys
+        outRow = outRow + 1
+        revTop.Offset(outRow - 1, 0).Value = CStr(key)
+    Next key
+
+    ApplyValidationListFromRange wsPick.Range(CELL_COMPID), wsPick.Range("J2:J5000")
+    ApplyValidationListFromRange wsPick.Range(CELL_SUPPLIER), wsPick.Range("K2:K5000")
+    ApplyValidationListFromRange wsPick.Range(CELL_DESCRIPTION), wsPick.Range("L2:L5000")
+    ApplyValidationListFromRange wsPick.Range(CELL_REV), wsPick.Range("M2:M5000")
+    ApplyValidationInline wsPick.Range(CELL_ACTIVEONLY), "TRUE,FALSE"
     Exit Sub
 
 EH:
     ' Non-fatal helper; picker remains usable without dropdowns
+End Sub
+
+Private Sub ApplyValidationInline(ByVal targetCell As Range, ByVal csvList As String)
+    On Error Resume Next
+    targetCell.Validation.Delete
+    On Error GoTo 0
+
+    targetCell.Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:=xlBetween, Formula1:=csvList
+    targetCell.Validation.IgnoreBlank = True
+    targetCell.Validation.InCellDropdown = True
 End Sub
 
 Private Sub ApplyValidationListFromRange(ByVal targetCell As Range, ByVal listRange As Range)
