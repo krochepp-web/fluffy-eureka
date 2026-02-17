@@ -31,3 +31,6 @@ When proposing work, always provide a structured task list using this template f
 ## Communication style
 - Be concise but explicit about assumptions, dependencies, and risk.
 - If uncertainty exists, present recommended order and a safe fallback path.
+
+## User/Dev Custom Preferences
+- 
