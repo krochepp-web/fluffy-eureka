@@ -159,6 +159,7 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
     Dim wsComps As Worksheet
     Dim loComps As ListObject
 
+    Dim bomId As String
     Dim compId As String, desc As String, uom As String, notes As String
 
     On Error GoTo EH
