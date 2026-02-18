@@ -68,6 +68,9 @@ Private Const LO_POLINES As String = "TBL_POLINES"
 Private Const SH_INV As String = "Inv"
 Private Const LO_INV As String = "TBL_INV"
 
+Private Const SH_SUPPLIERS As String = "Suppliers"
+Private Const LO_SUPPLIERS As String = "TBL_SUPPLIERS"
+
 ' Picker input layout
 Private Const CELL_SEARCH As String = "B2"
 Private Const CELL_REV As String = "B3"
@@ -153,6 +156,35 @@ Public Sub UI_Add_SelectedPickerRows_To_Inventory()
     UI_Add_SelectedPickerRows_ToContext PickerTarget_INV
 End Sub
 
+Public Sub UI_Add_ComponentByPNRev_To_ActiveBOM()
+    Dim pn As String
+    Dim rev As String
+    Dim qtyPer As Double
+
+    On Error GoTo EH
+
+    If Not GateReady_Safe(True) Then Exit Sub
+
+    pn = Trim$(InputBox("Enter component OurPN (blank to cancel).", "Add Component By PN/Rev"))
+    If Len(pn) = 0 Then Exit Sub
+
+    rev = Trim$(InputBox("Enter component OurRev.", "Add Component By PN/Rev (" & pn & ")"))
+    If Len(rev) = 0 Then
+        MsgBox "Revision is required.", vbExclamation, "Component Picker"
+        Exit Sub
+    End If
+
+    qtyPer = PromptDouble_Simple("Enter QtyPer (> 0).", "Add Component By PN/Rev", 1#)
+    If qtyPer <= 0 Then Exit Sub
+
+    AddComponentToActiveBOM pn, rev, qtyPer
+    Exit Sub
+
+EH:
+    MsgBox "Add-by-PN/Rev failed." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
+End Sub
+
 Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVal qtyPer As Double)
     Dim wb As Workbook
     Dim loBom As ListObject
@@ -210,7 +242,9 @@ Private Sub UI_Add_SelectedPickerRows_ToContext(ByVal targetContext As PickerTar
 
     Set rowIndices = GetSelectedPickerRowIndices(loPick)
     If rowIndices.Count = 0 Then
-        MsgBox "Select one or more rows in the picker results table first.", vbExclamation, "Component Picker"
+        MsgBox "No picker rows are selected." & vbCrLf & _
+               "Select one or more rows in Pickers!" & LO_PICK_RESULTS & " first, then run this macro.", _
+               vbExclamation, "Component Picker"
         Exit Sub
     End If
 
@@ -349,10 +383,14 @@ Private Function GetSelectedPickerRowIndices(ByVal loPick As ListObject) As Coll
     If loPick Is Nothing Then Exit Function
     If loPick.DataBodyRange Is Nothing Then Exit Function
 
+    On Error Resume Next
     Set sel = Selection
+    On Error GoTo 0
     If sel Is Nothing Then Exit Function
 
-    Set selInTable = Intersect(sel, loPick.DataBodyRange)
+    If Not sel.Parent Is loPick.Parent Then Exit Function
+
+    Set selInTable = Application.Intersect(sel, loPick.DataBodyRange)
     If selInTable Is Nothing Then Exit Function
 
     Set dicRows = CreateObject("Scripting.Dictionary")
@@ -546,6 +584,25 @@ Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Wor
             If Len(SafeText(arr(r, idxRev))) > 0 Then dicRev(SafeText(arr(r, idxRev))) = True
         End If
     Next r
+
+    ' Prefer full supplier catalog when available, so dropdown is not limited to current comps rows.
+    Dim loSuppliers As ListObject
+    Dim idxSupName As Long
+    Dim supArr As Variant
+
+    On Error Resume Next
+    Set loSuppliers = wb.Worksheets(SH_SUPPLIERS).ListObjects(LO_SUPPLIERS)
+    On Error GoTo EH
+
+    If Not loSuppliers Is Nothing Then
+        idxSupName = GetColIndex(loSuppliers, "SupplierName")
+        If idxSupName > 0 And Not loSuppliers.DataBodyRange Is Nothing Then
+            supArr = loSuppliers.ListColumns(idxSupName).DataBodyRange.Value
+            For r = 1 To UBound(supArr, 1)
+                If Len(SafeText(supArr(r, 1))) > 0 Then dicSup(SafeText(supArr(r, 1))) = True
+            Next r
+        End If
+    End If
 
     wsPick.Range("J1").Value = "CompIDOptions"
     wsPick.Range("K1").Value = "SupplierOptions"
