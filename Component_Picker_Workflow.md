@@ -27,7 +27,7 @@ Why: these checks confirm core schema/platform readiness and refresh registry me
    - `B5` max results
    - `B6` CompID (optional exact match)
    - `B7` Supplier (optional exact match via dropdown)
-   - `B8` Description (optional exact match via dropdown)
+   - `B8` Description (optional contains or wildcard match, with dropdown suggestions)
 4. Run: `UI_Refresh_PickerResults` after changing filters.
 
 ### Optional UserForm launcher
@@ -77,7 +77,7 @@ Behavior:
 The picker pipeline enforces:
 
 - Active component selection (`RevStatus = Active` when filter enabled / add processing)
-- Exact matching filters for `CompID`, `Supplier`, and `Description` when provided
+- Exact matching filters for `CompID` and `Supplier`, plus contains/wildcard matching for `Description` when provided
 - Positive quantity only
 - Target table/header presence checks by context
 - Uniqueness checks across **active** component mappings before writes:

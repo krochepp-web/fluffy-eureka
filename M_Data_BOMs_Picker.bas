@@ -412,7 +412,7 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
     ws.Range("A5").Value = "Max results"
     ws.Range("A6").Value = "CompID (optional exact match)"
     ws.Range("A7").Value = "Supplier (optional exact match; dropdown)"
-    ws.Range("A8").Value = "Description"
+    ws.Range("A8").Value = "Description (optional contains/wildcard)"
 
     If Len(SafeText(ws.Range(CELL_SEARCH).Value)) = 0 Then ws.Range(CELL_SEARCH).Value = ""
     If Len(SafeText(ws.Range(CELL_REV).Value)) = 0 Then ws.Range(CELL_REV).Value = ""
@@ -429,7 +429,7 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
     Set lo = ws.ListObjects(LO_PICK_RESULTS)
     On Error GoTo EH
 
-    headers = Array("CompID", "OurPN", "OurRev", "Description", "UOM", "ComponentNotes", "RevStatus")
+    headers = Array("CompID", "OurPN", "OurRev", "ComponentDescription", "UOM", "ComponentNotes", "RevStatus")
 
     If lo Is Nothing Then
         Set rngTopLeft = ws.Range(RESULTS_TOPLEFT)
@@ -464,6 +464,7 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
         End If
     End If
 
+    ws.Columns("J:M").EntireColumn.Hidden = True
     RebuildPickerDropdownLists wb, ws
 
     Exit Sub
@@ -506,7 +507,7 @@ End Function
 
 Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Worksheet)
     Dim loComps As ListObject
-    Dim idxCompId As Long, idxSupplier As Long, idxDesc As Long, idxRev As Long, idxRS As Long
+    Dim idxCompId As Long, idxSupplier As Long, idxDesc As Long, idxRev As Long
     Dim arr As Variant
     Dim r As Long
     Dim dicCompId As Object, dicSup As Object, dicDesc As Object, dicRev As Object
@@ -523,8 +524,7 @@ Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Wor
     idxSupplier = GetColIndex(loComps, "SupplierName")
     idxDesc = GetColIndex(loComps, "ComponentDescription")
     idxRev = GetColIndex(loComps, "OurRev")
-    idxRS = GetColIndex(loComps, "RevStatus")
-    If idxCompId = 0 Or idxDesc = 0 Or idxRS = 0 Then Exit Sub
+    If idxCompId = 0 Or idxDesc = 0 Then Exit Sub
 
     arr = loComps.DataBodyRange.Value
     Set dicCompId = CreateObject("Scripting.Dictionary")
@@ -537,15 +537,13 @@ Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Wor
     dicRev.CompareMode = vbTextCompare
 
     For r = 1 To UBound(arr, 1)
-        If StrComp(SafeText(arr(r, idxRS)), ACTIVE_LABEL, vbTextCompare) = 0 Then
-            If Len(SafeText(arr(r, idxCompId))) > 0 Then dicCompId(SafeText(arr(r, idxCompId))) = True
-            If idxSupplier > 0 Then
-                If Len(SafeText(arr(r, idxSupplier))) > 0 Then dicSup(SafeText(arr(r, idxSupplier))) = True
-            End If
-            If Len(SafeText(arr(r, idxDesc))) > 0 Then dicDesc(SafeText(arr(r, idxDesc))) = True
-            If idxRev > 0 Then
-                If Len(SafeText(arr(r, idxRev))) > 0 Then dicRev(SafeText(arr(r, idxRev))) = True
-            End If
+        If Len(SafeText(arr(r, idxCompId))) > 0 Then dicCompId(SafeText(arr(r, idxCompId))) = True
+        If idxSupplier > 0 Then
+            If Len(SafeText(arr(r, idxSupplier))) > 0 Then dicSup(SafeText(arr(r, idxSupplier))) = True
+        End If
+        If Len(SafeText(arr(r, idxDesc))) > 0 Then dicDesc(SafeText(arr(r, idxDesc))) = True
+        If idxRev > 0 Then
+            If Len(SafeText(arr(r, idxRev))) > 0 Then dicRev(SafeText(arr(r, idxRev))) = True
         End If
     Next r
 
@@ -626,7 +624,7 @@ Private Sub RefreshPickerResults(ByVal wb As Workbook)
     Dim maxResults As Long
     Dim compIdFilter As String
     Dim supplierFilter As String
-    Dim descExactFilter As String
+    Dim descFilter As String
 
     On Error GoTo EH
 
@@ -639,12 +637,12 @@ Private Sub RefreshPickerResults(ByVal wb As Workbook)
     maxResults = ParseLongDefault(wsPick.Range(CELL_MAXRESULTS).Value, DEFAULT_MAXRESULTS)
     compIdFilter = Trim$(SafeText(wsPick.Range(CELL_COMPID).Value))
     supplierFilter = Trim$(SafeText(wsPick.Range(CELL_SUPPLIER).Value))
-    descExactFilter = Trim$(SafeText(wsPick.Range(CELL_DESCRIPTION).Value))
+    descFilter = Trim$(SafeText(wsPick.Range(CELL_DESCRIPTION).Value))
     If maxResults < 1 Then maxResults = DEFAULT_MAXRESULTS
 
     Dim outArr As Variant
     Dim outCount As Long
-    outArr = Picker_GetResults(wb, searchText, revFilter, activeOnly, maxResults, outCount, compIdFilter, supplierFilter, descExactFilter)
+    outArr = Picker_GetResults(wb, searchText, revFilter, activeOnly, maxResults, outCount, compIdFilter, supplierFilter, descFilter)
 
     If outCount = 0 Then
         ClearPickResults loPick
@@ -667,7 +665,7 @@ Public Function Picker_GetResults( _
     ByRef outCount As Long, _
     Optional ByVal compIdFilter As String = "", _
     Optional ByVal supplierFilter As String = "", _
-    Optional ByVal descExactFilter As String = "") As Variant
+    Optional ByVal descFilter As String = "") As Variant
     Const PROC_NAME As String = "M_Data_BOMs_Picker.Picker_GetResults"
 
     Dim wsComps As Worksheet
@@ -732,8 +730,8 @@ Public Function Picker_GetResults( _
             If StrComp(cSupplier, supplierFilter, vbTextCompare) <> 0 Then GoTo NextRow
         End If
 
-        If Len(descExactFilter) > 0 Then
-            If StrComp(cDesc, descExactFilter, vbTextCompare) <> 0 Then GoTo NextRow
+        If Len(descFilter) > 0 Then
+            If Not TextMatchesWildcardOrContains(cDesc, descFilter) Then GoTo NextRow
         End If
 
         If Len(searchText) > 0 Then
@@ -1096,6 +1094,26 @@ Private Function SafeText(ByVal v As Variant) As String
         SafeText = vbNullString
     Else
         SafeText = Trim$(CStr(v))
+    End If
+End Function
+
+Private Function TextMatchesWildcardOrContains(ByVal candidate As String, ByVal filterText As String) As Boolean
+    Dim normalizedCandidate As String
+    Dim normalizedFilter As String
+
+    normalizedCandidate = LCase$(SafeText(candidate))
+    normalizedFilter = LCase$(Trim$(SafeText(filterText)))
+
+    If Len(normalizedFilter) = 0 Then
+        TextMatchesWildcardOrContains = True
+        Exit Function
+    End If
+
+    If InStr(1, normalizedFilter, "*", vbBinaryCompare) > 0 Or _
+       InStr(1, normalizedFilter, "?", vbBinaryCompare) > 0 Then
+        TextMatchesWildcardOrContains = (normalizedCandidate Like normalizedFilter)
+    Else
+        TextMatchesWildcardOrContains = (InStr(1, normalizedCandidate, normalizedFilter, vbBinaryCompare) > 0)
     End If
 End Function
 
