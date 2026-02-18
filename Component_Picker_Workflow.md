@@ -13,6 +13,8 @@ Run these in order before first use (or after schema changes):
 
 Why: these checks confirm core schema/platform readiness and refresh registry metadata before user-facing operations.
 
+Note on Gate popups: successful Gate checks are now silent by default; failures still prompt. If `Landing` has `DEV MODE? = TRUE`, Gate PASS messages are shown.
+
 ---
 
 ## 2) Open and refresh the picker
@@ -39,6 +41,7 @@ Why: these checks confirm core schema/platform readiness and refresh registry me
 ## 3) Add selected components to a target context
 
 > In all contexts, first select one or more rows in `Pickers!TBL_PICK_RESULTS` **while the Pickers sheet is active**.
+> If nothing is selected, add macros now offer a prompt to use all currently displayed picker rows.
 
 ### A) Add to BOM
 1. Navigate to the destination BOM sheet and ensure the BOM table is the first ListObject on that sheet.

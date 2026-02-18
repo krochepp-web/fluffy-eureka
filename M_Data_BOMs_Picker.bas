@@ -242,9 +242,15 @@ Private Sub UI_Add_SelectedPickerRows_ToContext(ByVal targetContext As PickerTar
 
     Set rowIndices = GetSelectedPickerRowIndices(loPick)
     If rowIndices.Count = 0 Then
-        MsgBox "No picker rows are selected." & vbCrLf & _
-               "Select one or more rows in Pickers!" & LO_PICK_RESULTS & " first, then run this macro.", _
-               vbExclamation, "Component Picker"
+        If PromptYesNo("No picker rows are selected." & vbCrLf & _
+                       "Use all rows currently shown in Pickers!" & LO_PICK_RESULTS & " instead?", _
+                       "Component Picker", False) Then
+            Set rowIndices = GetAllPickerRowIndices(loPick)
+        End If
+    End If
+
+    If rowIndices.Count = 0 Then
+        MsgBox "No picker rows were provided to add.", vbExclamation, "Component Picker"
         Exit Sub
     End If
 
@@ -409,6 +415,20 @@ Private Function GetSelectedPickerRowIndices(ByVal loPick As ListObject) As Coll
         End If
     Next key
 End Function
+
+Private Function GetAllPickerRowIndices(ByVal loPick As ListObject) As Collection
+    Dim i As Long
+
+    Set GetAllPickerRowIndices = New Collection
+
+    If loPick Is Nothing Then Exit Function
+    If loPick.DataBodyRange Is Nothing Then Exit Function
+
+    For i = 1 To loPick.DataBodyRange.Rows.Count
+        GetAllPickerRowIndices.Add i
+    Next i
+End Function
+
 
 Private Function ContextLabel(ByVal targetContext As PickerTargetContext) As String
     Select Case targetContext
