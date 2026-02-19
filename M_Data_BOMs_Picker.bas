@@ -617,7 +617,7 @@ Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Wor
     If Not loSuppliers Is Nothing Then
         idxSupName = GetColIndex(loSuppliers, "SupplierName")
         If idxSupName > 0 And Not loSuppliers.DataBodyRange Is Nothing Then
-            supArr = loSuppliers.ListColumns(idxSupName).DataBodyRange.Value
+            supArr = ColumnRangeTo2D(loSuppliers.ListColumns(idxSupName).DataBodyRange)
             For r = 1 To UBound(supArr, 1)
                 If Len(SafeText(supArr(r, 1))) > 0 Then dicSup(SafeText(supArr(r, 1))) = True
             Next r
@@ -864,8 +864,8 @@ Private Sub Bom_UpsertComponent(ByVal loBom As ListObject, ByVal compId As Strin
     If idxPn = 0 Or idxRev = 0 Or idxQty = 0 Then Err.Raise vbObjectError + 8400, "Bom_UpsertComponent", "BOM table missing OurPN/OurRev/QtyPer."
 
     If Not loBom.DataBodyRange Is Nothing Then
-        arrPn = loBom.ListColumns(idxPn).DataBodyRange.Value
-        arrRev = loBom.ListColumns(idxRev).DataBodyRange.Value
+        arrPn = ColumnRangeTo2D(loBom.ListColumns(idxPn).DataBodyRange)
+        arrRev = ColumnRangeTo2D(loBom.ListColumns(idxRev).DataBodyRange)
 
         For i = 1 To UBound(arrPn, 1)
             If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
@@ -1128,13 +1128,13 @@ Private Function Comps_LookupActive(ByVal loComps As ListObject, ByVal pn As Str
 
     If idxId = 0 Or idxPn = 0 Or idxRev = 0 Or idxDesc = 0 Or idxUom = 0 Or idxNotes = 0 Or idxRS = 0 Then Exit Function
 
-    arrId = loComps.ListColumns(idxId).DataBodyRange.Value
-    arrPn = loComps.ListColumns(idxPn).DataBodyRange.Value
-    arrRev = loComps.ListColumns(idxRev).DataBodyRange.Value
-    arrDesc = loComps.ListColumns(idxDesc).DataBodyRange.Value
-    arrUom = loComps.ListColumns(idxUom).DataBodyRange.Value
-    arrNotes = loComps.ListColumns(idxNotes).DataBodyRange.Value
-    arrRS = loComps.ListColumns(idxRS).DataBodyRange.Value
+    arrId = ColumnRangeTo2D(loComps.ListColumns(idxId).DataBodyRange)
+    arrPn = ColumnRangeTo2D(loComps.ListColumns(idxPn).DataBodyRange)
+    arrRev = ColumnRangeTo2D(loComps.ListColumns(idxRev).DataBodyRange)
+    arrDesc = ColumnRangeTo2D(loComps.ListColumns(idxDesc).DataBodyRange)
+    arrUom = ColumnRangeTo2D(loComps.ListColumns(idxUom).DataBodyRange)
+    arrNotes = ColumnRangeTo2D(loComps.ListColumns(idxNotes).DataBodyRange)
+    arrRS = ColumnRangeTo2D(loComps.ListColumns(idxRS).DataBodyRange)
 
     For i = 1 To UBound(arrPn, 1)
         If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
@@ -1173,6 +1173,29 @@ Private Function SafeText(ByVal v As Variant) As String
         SafeText = Trim$(CStr(v))
     End If
 End Function
+
+Private Function ColumnRangeTo2D(ByVal rng As Range) As Variant
+    Dim raw As Variant
+    Dim out As Variant
+
+    If rng Is Nothing Then
+        ReDim out(1 To 1, 1 To 1)
+        out(1, 1) = vbNullString
+        ColumnRangeTo2D = out
+        Exit Function
+    End If
+
+    raw = rng.Value
+
+    If IsArray(raw) Then
+        ColumnRangeTo2D = raw
+    Else
+        ReDim out(1 To 1, 1 To 1)
+        out(1, 1) = raw
+        ColumnRangeTo2D = out
+    End If
+End Function
+
 
 Private Function TextMatchesWildcardOrContains(ByVal candidate As String, ByVal filterText As String) As Boolean
     Dim normalizedCandidate As String
