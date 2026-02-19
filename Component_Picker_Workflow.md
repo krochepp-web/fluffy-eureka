@@ -13,6 +13,8 @@ Run these in order before first use (or after schema changes):
 
 Why: these checks confirm core schema/platform readiness and refresh registry metadata before user-facing operations.
 
+Note on Gate popups: successful Gate checks are now silent by default; failures still prompt. If `Landing` has `DEV MODE? = TRUE`, Gate PASS messages are shown.
+
 ---
 
 ## 2) Open and refresh the picker
@@ -27,7 +29,7 @@ Why: these checks confirm core schema/platform readiness and refresh registry me
    - `B5` max results
    - `B6` CompID (optional exact match)
    - `B7` Supplier (optional exact match via dropdown)
-   - `B8` Description (optional exact match via dropdown)
+   - `B8` Description (optional contains or wildcard match, with dropdown suggestions)
 4. Run: `UI_Refresh_PickerResults` after changing filters.
 
 ### Optional UserForm launcher
@@ -38,7 +40,8 @@ Why: these checks confirm core schema/platform readiness and refresh registry me
 
 ## 3) Add selected components to a target context
 
-> In all contexts, first select one or more rows in `Pickers!TBL_PICK_RESULTS`.
+> In all contexts, first select one or more rows in `Pickers!TBL_PICK_RESULTS` **while the Pickers sheet is active**.
+> If nothing is selected, add macros now offer: **Yes = use all displayed rows**, **No = open PN/Rev dialog (BOM flow)**, **Cancel = stop**.
 
 ### A) Add to BOM
 1. Navigate to the destination BOM sheet and ensure the BOM table is the first ListObject on that sheet.
@@ -51,6 +54,10 @@ Why: these checks confirm core schema/platform readiness and refresh registry me
 Behavior:
 - If PN+Rev already exists in BOM, `QtyPer` is incremented.
 - If PN+Rev is new, a row is inserted.
+
+Fallback option (manual entry):
+- Run: `UI_Add_ComponentByPNRev_To_ActiveBOM`
+- Enter PN and QtyPer; Rev is optional. If left blank and multiple active revisions exist, you will be prompted to choose one.
 
 ### B) Add to PO Lines
 1. Ensure `POLines!TBL_POLINES` exists and is ready.
@@ -77,7 +84,7 @@ Behavior:
 The picker pipeline enforces:
 
 - Active component selection (`RevStatus = Active` when filter enabled / add processing)
-- Exact matching filters for `CompID`, `Supplier`, and `Description` when provided
+- Exact matching filters for `CompID` and `Supplier`, plus contains/wildcard matching for `Description` when provided
 - Positive quantity only
 - Target table/header presence checks by context
 - Uniqueness checks across **active** component mappings before writes:
@@ -94,7 +101,8 @@ For easier use, assign worksheet buttons:
 
 - **Open Picker** → `UI_Open_ComponentPicker`
 - **Refresh Picker Results** → `UI_Refresh_PickerResults`
-- **Add to BOM** → `UI_Add_SelectedPickerRows_To_ActiveBOM`
+- **Add to BOM (from selected picker rows)** → `UI_Add_SelectedPickerRows_To_ActiveBOM`
+- **Add to BOM (manual PN/Rev fallback)** → `UI_Add_ComponentByPNRev_To_ActiveBOM`
 - **Add to PO Lines** → `UI_Add_SelectedPickerRows_To_POLines`
 - **Add to Inventory** → `UI_Add_SelectedPickerRows_To_Inventory`
 
