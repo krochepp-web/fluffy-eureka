@@ -86,7 +86,9 @@ Public Function Gate_Ready(Optional ByVal showUserMessage As Boolean = True) As 
     '--- User message
     If showUserMessage Then
         If Gate_Ready Then
-            MsgBox "Workbook Gate: PASS", vbInformation, "Gate"
+            If ShouldShowGatePassMessage(wb) Then
+                MsgBox "Workbook Gate: PASS", vbInformation, "Gate"
+            End If
         Else
             MsgBox "Workbook Gate: FAIL" & vbCrLf & _
                    "Schema validator ran: " & CStr(schemaRan) & vbCrLf & _
@@ -167,3 +169,72 @@ Private Function WorksheetExists(ByVal wb As Workbook, ByVal sheetName As String
 End Function
 
 
+
+
+Private Function ShouldShowGatePassMessage(ByVal wb As Workbook) As Boolean
+    ' Silent-on-success by default. If Landing has DEV MODE? = TRUE,
+    ' show pass message to support verbose diagnostic workflows.
+    ShouldShowGatePassMessage = LandingFlagValue(wb, "DEV MODE?", False)
+End Function
+
+Private Function LandingFlagValue(ByVal wb As Workbook, ByVal headerName As String, ByVal defaultValue As Boolean) As Boolean
+    Dim ws As Worksheet
+    Dim lo As ListObject
+    Dim idx As Long
+    Dim headerCell As Range
+
+    On Error GoTo Fallback
+
+    Set ws = wb.Worksheets("Landing")
+
+    For Each lo In ws.ListObjects
+        idx = GetListColumnIndex(lo, headerName)
+        If idx > 0 Then
+            If Not lo.DataBodyRange Is Nothing Then
+                LandingFlagValue = ParseBoolean(lo.ListColumns(idx).DataBodyRange.Cells(1, 1).Value, defaultValue)
+                Exit Function
+            End If
+        End If
+    Next lo
+
+Fallback:
+    On Error Resume Next
+    Set headerCell = ws.Rows(1).Find(What:=headerName, LookIn:=xlValues, LookAt:=xlWhole, MatchCase:=False)
+    On Error GoTo 0
+
+    If Not headerCell Is Nothing Then
+        LandingFlagValue = ParseBoolean(ws.Cells(2, headerCell.Column).Value, defaultValue)
+    Else
+        LandingFlagValue = defaultValue
+    End If
+End Function
+
+Private Function GetListColumnIndex(ByVal lo As ListObject, ByVal headerName As String) As Long
+    Dim lc As ListColumn
+    For Each lc In lo.ListColumns
+        If StrComp(lc.Name, headerName, vbTextCompare) = 0 Then
+            GetListColumnIndex = lc.Index
+            Exit Function
+        End If
+    Next lc
+    GetListColumnIndex = 0
+End Function
+
+Private Function ParseBoolean(ByVal v As Variant, ByVal defaultValue As Boolean) As Boolean
+    Dim s As String
+
+    If IsError(v) Or IsNull(v) Then
+        ParseBoolean = defaultValue
+        Exit Function
+    End If
+
+    s = UCase$(Trim$(CStr(v)))
+    Select Case s
+        Case "TRUE", "YES", "Y", "1", "ON"
+            ParseBoolean = True
+        Case "FALSE", "NO", "N", "0", "OFF"
+            ParseBoolean = False
+        Case Else
+            ParseBoolean = defaultValue
+    End Select
+End Function
