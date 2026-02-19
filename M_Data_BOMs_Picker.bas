@@ -157,6 +157,8 @@ Public Sub UI_Add_SelectedPickerRows_To_Inventory()
 End Sub
 
 Public Sub UI_Add_ComponentByPNRev_To_ActiveBOM()
+    Dim wb As Workbook
+    Dim loComps As ListObject
     Dim pn As String
     Dim rev As String
     Dim qtyPer As Double
@@ -165,13 +167,18 @@ Public Sub UI_Add_ComponentByPNRev_To_ActiveBOM()
 
     If Not GateReady_Safe(True) Then Exit Sub
 
+    Set wb = ThisWorkbook
+    Set loComps = wb.Worksheets(SH_COMPS).ListObjects(LO_COMPS)
+
     pn = Trim$(InputBox("Enter component OurPN (blank to cancel).", "Add Component By PN/Rev"))
     If Len(pn) = 0 Then Exit Sub
 
-    rev = Trim$(InputBox("Enter component OurRev.", "Add Component By PN/Rev (" & pn & ")"))
+    rev = Trim$(InputBox("Enter component OurRev (optional)." & vbCrLf & _
+                         "Leave blank to choose from active revisions for this PN.", _
+                         "Add Component By PN/Rev (" & pn & ")"))
+
     If Len(rev) = 0 Then
-        MsgBox "Revision is required.", vbExclamation, "Component Picker"
-        Exit Sub
+        If Not ResolveRevisionForPN(loComps, pn, rev) Then Exit Sub
     End If
 
     qtyPer = PromptDouble_Simple("Enter QtyPer (> 0).", "Add Component By PN/Rev", 1#)
@@ -184,6 +191,69 @@ EH:
     MsgBox "Add-by-PN/Rev failed." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
 End Sub
+
+Private Function ResolveRevisionForPN(ByVal loComps As ListObject, ByVal pn As String, ByRef revOut As String) As Boolean
+    Dim idxPn As Long, idxRev As Long, idxRS As Long
+    Dim arrPn As Variant, arrRev As Variant, arrRS As Variant
+    Dim i As Long
+    Dim key As Variant
+    Dim revPrompt As String
+    Dim enteredRev As String
+    Dim dicRev As Object
+
+    ResolveRevisionForPN = False
+    revOut = vbNullString
+
+    If loComps Is Nothing Then Exit Function
+    If loComps.DataBodyRange Is Nothing Then Exit Function
+
+    idxPn = GetColIndex(loComps, "OurPN")
+    idxRev = GetColIndex(loComps, "OurRev")
+    idxRS = GetColIndex(loComps, "RevStatus")
+    If idxPn = 0 Or idxRev = 0 Or idxRS = 0 Then Exit Function
+
+    arrPn = ColumnRangeTo2D(loComps.ListColumns(idxPn).DataBodyRange)
+    arrRev = ColumnRangeTo2D(loComps.ListColumns(idxRev).DataBodyRange)
+    arrRS = ColumnRangeTo2D(loComps.ListColumns(idxRS).DataBodyRange)
+
+    Set dicRev = CreateObject("Scripting.Dictionary")
+    dicRev.CompareMode = vbTextCompare
+
+    For i = 1 To UBound(arrPn, 1)
+        If StrComp(SafeText(arrPn(i, 1)), pn, vbTextCompare) = 0 And _
+           StrComp(SafeText(arrRS(i, 1)), ACTIVE_LABEL, vbTextCompare) = 0 Then
+            If Len(SafeText(arrRev(i, 1))) > 0 Then dicRev(SafeText(arrRev(i, 1))) = True
+        End If
+    Next i
+
+    If dicRev.Count = 0 Then
+        MsgBox "No active revisions found for PN: " & pn, vbExclamation, "Component Picker"
+        Exit Function
+    End If
+
+    If dicRev.Count = 1 Then
+        revOut = CStr(dicRev.Keys()(0))
+        ResolveRevisionForPN = True
+        Exit Function
+    End If
+
+    revPrompt = "Multiple active revisions found for PN " & pn & "." & vbCrLf & _
+                "Enter one of:" & vbCrLf
+    For Each key In dicRev.Keys
+        revPrompt = revPrompt & "- " & CStr(key) & vbCrLf
+    Next key
+
+    enteredRev = Trim$(InputBox(revPrompt, "Choose Revision"))
+    If Len(enteredRev) = 0 Then Exit Function
+
+    If Not dicRev.Exists(enteredRev) Then
+        MsgBox "Revision '" & enteredRev & "' is not an active revision for PN " & pn & ".", vbExclamation, "Component Picker"
+        Exit Function
+    End If
+
+    revOut = enteredRev
+    ResolveRevisionForPN = True
+End Function
 
 Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVal qtyPer As Double)
     Dim wb As Workbook
@@ -242,11 +312,29 @@ Private Sub UI_Add_SelectedPickerRows_ToContext(ByVal targetContext As PickerTar
 
     Set rowIndices = GetSelectedPickerRowIndices(loPick)
     If rowIndices.Count = 0 Then
-        If PromptYesNo("No picker rows are selected." & vbCrLf & _
-                       "Use all rows currently shown in Pickers!" & LO_PICK_RESULTS & " instead?", _
-                       "Component Picker", False) Then
-            Set rowIndices = GetAllPickerRowIndices(loPick)
-        End If
+        Dim selChoice As VbMsgBoxResult
+
+        selChoice = PromptYesNoCancel( _
+            "No picker rows are currently selected." & vbCrLf & _
+            "(Tip: if you run this from a BOM sheet, your picker selection is not active.)" & vbCrLf & vbCrLf & _
+            "Yes = use ALL rows currently shown in Pickers!" & LO_PICK_RESULTS & vbCrLf & _
+            "No = use PN/Rev dialog (BOM only)" & vbCrLf & _
+            "Cancel = stop", _
+            "Component Picker", vbDefaultButton1)
+
+        Select Case selChoice
+            Case vbYes
+                Set rowIndices = GetAllPickerRowIndices(loPick)
+
+            Case vbNo
+                If targetContext = PickerTarget_BOM Then
+                    UI_Add_ComponentByPNRev_To_ActiveBOM
+                    Exit Sub
+                End If
+
+            Case Else
+                Exit Sub
+        End Select
     End If
 
     If rowIndices.Count = 0 Then
@@ -1262,6 +1350,11 @@ Private Function PromptYesNo(ByVal prompt As String, ByVal title As String, ByVa
     btn = MsgBox(prompt, vbQuestion + vbYesNo + IIf(defaultYes, vbDefaultButton1, vbDefaultButton2), title)
     PromptYesNo = (btn = vbYes)
 End Function
+
+Private Function PromptYesNoCancel(ByVal prompt As String, ByVal title As String, Optional ByVal defaultButton As VbMsgBoxStyle = vbDefaultButton1) As VbMsgBoxResult
+    PromptYesNoCancel = MsgBox(prompt, vbQuestion + vbYesNoCancel + defaultButton, title)
+End Function
+
 
 Private Function GetUserNameSafe() As String
     Dim u As String

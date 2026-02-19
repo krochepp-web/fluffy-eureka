@@ -41,7 +41,7 @@ Note on Gate popups: successful Gate checks are now silent by default; failures 
 ## 3) Add selected components to a target context
 
 > In all contexts, first select one or more rows in `Pickers!TBL_PICK_RESULTS` **while the Pickers sheet is active**.
-> If nothing is selected, add macros now offer a prompt to use all currently displayed picker rows.
+> If nothing is selected, add macros now offer: **Yes = use all displayed rows**, **No = open PN/Rev dialog (BOM flow)**, **Cancel = stop**.
 
 ### A) Add to BOM
 1. Navigate to the destination BOM sheet and ensure the BOM table is the first ListObject on that sheet.
@@ -57,7 +57,7 @@ Behavior:
 
 Fallback option (manual entry):
 - Run: `UI_Add_ComponentByPNRev_To_ActiveBOM`
-- Enter PN, Rev, and QtyPer directly (useful when you do not want to use picker row selection).
+- Enter PN and QtyPer; Rev is optional. If left blank and multiple active revisions exist, you will be prompted to choose one.
 
 ### B) Add to PO Lines
 1. Ensure `POLines!TBL_POLINES` exists and is ready.
