@@ -61,8 +61,9 @@ Private Function ShouldSkipSchemaTab(ByVal tabName As String) As Boolean
         Exit Function
     End If
 
-    ' User-generated BOM sheets/spreadsheets: any tab starting with BOM_
-    If t Like "BOM_*" Then
+    ' User-generated BOM sheets/spreadsheets: skip dynamic BOM_* tabs,
+    ' but DO NOT skip BOM_TEMPLATE (it is schema-required).
+    If t Like "BOM_*" And t <> "BOM_TEMPLATE" Then
         ShouldSkipSchemaTab = True
         Exit Function
     End If
