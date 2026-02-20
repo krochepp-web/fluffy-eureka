@@ -142,10 +142,9 @@ Private Sub RunNewComponent()
     RequireColumn loSupp, "SupplierName"
     RequireColumn loSupp, "SupplierDefaultLT"
 
-    ' Guards: required named ranges
-    RequireNamedRange "NR_UOM"
-    RequireNamedRange "NR_RevStatus"
-    RequireNamedRange "NR_IMSStatus"
+    ' Named ranges are preferred for controlled list prompts, but do not hard-fail
+    ' component creation when a named range is missing. Prompt_ListValue handles
+    ' fallback to direct text entry with defaults when needed.
 
     ' IMS default: attempt schema lookup; fallback if blank
     imsDefault = GetSchemaDefaultValue("Comps", "TBL_COMPS", "IMSStatus")
@@ -410,11 +409,16 @@ Private Function Prompt_ListValue(ByVal namedRange As String, ByVal prompt As St
 
     Prompt_ListValue = vbNullString
 
+    If Not NamedRangeExists(namedRange) Then
+        Prompt_ListValue = Prompt_FreeTextValue(prompt, title, defaultValue, namedRange)
+        Exit Function
+    End If
+
     arr = GetNamedRangeValues(namedRange)
     n = UBound(arr, 1)
 
     If n <= 0 Then
-        MsgBox "Named range '" & namedRange & "' has no values.", vbExclamation, title
+        Prompt_ListValue = Prompt_FreeTextValue(prompt, title, defaultValue, namedRange)
         Exit Function
     End If
 
@@ -541,6 +545,26 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Component"
     Err.Raise vbObjectError + 5801, "RequireNamedRange", "Named range not found: " & namedRange
 End Sub
+
+Private Function NamedRangeExists(ByVal namedRange As String) As Boolean
+    Dim nm As Name
+    On Error Resume Next
+    Set nm = ThisWorkbook.Names(namedRange)
+    On Error GoTo 0
+    NamedRangeExists = Not nm Is Nothing
+End Function
+
+Private Function Prompt_FreeTextValue(ByVal prompt As String, ByVal title As String, ByVal defaultValue As String, ByVal sourceName As String) As String
+    Dim response As String
+    response = Trim$(InputBox(prompt & vbCrLf & vbCrLf & _
+                              "List source '" & sourceName & "' is unavailable. Enter value manually.", _
+                              title, defaultValue))
+    If Len(response) = 0 Then
+        Prompt_FreeTextValue = defaultValue
+    Else
+        Prompt_FreeTextValue = response
+    End If
+End Function
 
 Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
     Dim rng As Range
