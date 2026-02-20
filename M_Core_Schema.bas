@@ -61,8 +61,8 @@ Private Function ShouldSkipSchemaTab(ByVal tabName As String) As Boolean
         Exit Function
     End If
 
-    ' User-generated BOM sheets: BOM_<TAID>
-    If Left$(t, 4) = "BOM_" Then
+    ' User-generated BOM sheets/spreadsheets: any tab starting with BOM_
+    If t Like "BOM_*" Then
         ShouldSkipSchemaTab = True
         Exit Function
     End If
