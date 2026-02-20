@@ -2,13 +2,6 @@
 
 This guide explains the intended end-user workflow and exactly which VBA scripts (macros) to run.
 
-Canonical BOM add entry points are:
-- `UI_Add_SelectedPickerRows_To_ActiveBOM`
-- `UI_Add_ComponentByPNRev_To_ActiveBOM`
-
-Deprecated compatibility macro (do not map to buttons/automation):
-- `UI_Add_Components_To_BOM` (wrapper that routes into picker module)
-
 ## 1) One-time setup and validation (recommended)
 
 Run these in order before first use (or after schema changes):
@@ -102,7 +95,7 @@ If a check fails, the macro stops with a clear message.
 
 ---
 
-## 5) Suggested button-to-macro mapping (canonical only)
+## 5) Suggested button-to-macro mapping
 
 For easier use, assign worksheet buttons:
 
@@ -115,9 +108,6 @@ For easier use, assign worksheet buttons:
 
 Optional:
 - **Open Picker Form (if available)** → `UI_Open_ComponentPicker_Form_Optional`
-
-Avoid mapping legacy compatibility macro:
-- ~~`UI_Add_Components_To_BOM`~~ (deprecated wrapper)
 
 ---
 

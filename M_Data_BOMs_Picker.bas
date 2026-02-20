@@ -364,11 +364,11 @@ Private Sub AddPickedRowsToTarget(ByVal wb As Workbook, ByVal loPick As ListObje
                                   ByVal targetContext As PickerTargetContext, ByVal qtyDefault As Double, _
                                   ByVal promptPerRowQty As Boolean)
     Dim loTarget As ListObject
-    Dim loComps As ListObject
     Dim i As Long
     Dim pickRowIndex As Long
 
-    Dim compId As String, pn As String, rev As String, desc As String, uom As String, notes As String
+    Dim compId As String, pn As String, rev As String, desc As String, uom As String, notes As String, rs As String
+    Dim pickDescHeader As String
     Dim qtyVal As Double
 
     On Error GoTo EH
@@ -376,14 +376,21 @@ Private Sub AddPickedRowsToTarget(ByVal wb As Workbook, ByVal loPick As ListObje
     ValidateUniqueActiveMappings wb
 
     Set loTarget = ResolveTargetTable(wb, targetContext)
-    Set loComps = GetCompsTable(wb)
+    pickDescHeader = PickerResultDescriptionHeader(loPick)
 
     For i = 1 To rowIndices.Count
         pickRowIndex = CLng(rowIndices(i))
 
+        compId = SafeText(loPick.ListColumns("CompID").DataBodyRange.Cells(pickRowIndex, 1).Value)
         pn = SafeText(loPick.ListColumns("OurPN").DataBodyRange.Cells(pickRowIndex, 1).Value)
         rev = SafeText(loPick.ListColumns("OurRev").DataBodyRange.Cells(pickRowIndex, 1).Value)
-        If Not Comps_LookupActive(loComps, pn, rev, ACTIVE_LABEL, compId, desc, uom, notes) Then
+        desc = SafeText(loPick.ListColumns(pickDescHeader).DataBodyRange.Cells(pickRowIndex, 1).Value)
+        uom = SafeText(loPick.ListColumns("UOM").DataBodyRange.Cells(pickRowIndex, 1).Value)
+        notes = SafeText(loPick.ListColumns("ComponentNotes").DataBodyRange.Cells(pickRowIndex, 1).Value)
+        rs = SafeText(loPick.ListColumns("RevStatus").DataBodyRange.Cells(pickRowIndex, 1).Value)
+
+        If StrComp(rs, ACTIVE_LABEL, vbTextCompare) <> 0 Then
+            MsgBox "Skipping non-active component: " & pn & " / " & rev & " (RevStatus=" & rs & ")", vbExclamation, "Component Picker"
             GoTo NextRow
         End If
 
@@ -631,6 +638,17 @@ Private Function ResetPickerResultsTable(ByVal ws As Worksheet, ByVal lo As List
     ResetPickerResultsTable.TableStyle = "TableStyleLight9"
 
     If Not ResetPickerResultsTable.DataBodyRange Is Nothing Then ResetPickerResultsTable.DataBodyRange.ClearContents
+End Function
+
+Private Function PickerResultDescriptionHeader(ByVal loPick As ListObject) As String
+    If GetColIndex(loPick, "Description") > 0 Then
+        PickerResultDescriptionHeader = "Description"
+    ElseIf GetColIndex(loPick, "ComponentDescription") > 0 Then
+        PickerResultDescriptionHeader = "ComponentDescription"
+    Else
+        Err.Raise vbObjectError + 8605, "PickerResultDescriptionHeader", _
+                  "Picker results table is missing Description column."
+    End If
 End Function
 
 Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Worksheet)
@@ -1136,9 +1154,6 @@ Private Function GetActiveBomTable() As ListObject
     Set wsBom = ActiveSheet
     If wsBom Is Nothing Then Err.Raise vbObjectError + 8300, PROC_NAME, "No active sheet."
     If wsBom.ListObjects.Count < 1 Then Err.Raise vbObjectError + 8301, PROC_NAME, "Active sheet has no BOM table (ListObject)."
-
-    EnsureCanEditBomSheet wsBom
-
     Set loBom = wsBom.ListObjects(1)
 
     RequireColumn loBom, "CompID"
@@ -1150,35 +1165,6 @@ Private Function GetActiveBomTable() As ListObject
     RequireColumn loBom, "CompNotes"
 
     Set GetActiveBomTable = loBom
-End Function
-
-Private Sub EnsureCanEditBomSheet(ByVal wsBom As Worksheet)
-    Dim bomId As String
-
-    bomId = M_Data_BOMs_Status.GetBomIdByTabName(wsBom.Name)
-    If Len(bomId) = 0 Then
-        Err.Raise vbObjectError + 8302, "EnsureCanEditBomSheet", "Could not resolve BOMID for sheet '" & wsBom.Name & "'."
-    End If
-
-    If Not M_Data_BOMs_Status.CanEditBom(bomId) Then
-        Err.Raise vbObjectError + 8303, "EnsureCanEditBomSheet", M_Data_BOMs_Status.GetBomEditDisabledMessage(bomId)
-    End If
-End Sub
-
-Private Function GetCompsTable(ByVal wb As Workbook) As ListObject
-    Dim loComps As ListObject
-
-    Set loComps = wb.Worksheets(SH_COMPS).ListObjects(LO_COMPS)
-
-    RequireColumn loComps, "CompID"
-    RequireColumn loComps, "OurPN"
-    RequireColumn loComps, "OurRev"
-    RequireColumn loComps, "ComponentDescription"
-    RequireColumn loComps, "UOM"
-    RequireColumn loComps, "ComponentNotes"
-    RequireColumn loComps, "RevStatus"
-
-    Set GetCompsTable = loComps
 End Function
 
 Private Sub RequireColumn(ByVal lo As ListObject, ByVal header As String)
