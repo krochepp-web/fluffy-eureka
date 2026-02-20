@@ -61,6 +61,8 @@ Private Const LO_COMPS As String = "TBL_COMPS"
 
 Private Const SH_PICKERS As String = "Pickers"
 Private Const LO_PICK_RESULTS As String = "TBL_PICK_RESULTS"
+Private Const SH_BOMS As String = "BOMS"
+Private Const LO_BOMS As String = "TBL_BOMS"
 
 Private Const SH_POLINES As String = "POLines"
 Private Const LO_POLINES As String = "TBL_POLINES"
@@ -79,13 +81,15 @@ Private Const CELL_MAXRESULTS As String = "B5"
 Private Const CELL_COMPID As String = "B6"
 Private Const CELL_SUPPLIER As String = "B7"
 Private Const CELL_DESCRIPTION As String = "B8"
+Private Const CELL_BOMTARGET As String = "B9"
 
 ' Picker top-left for results table
-Private Const RESULTS_TOPLEFT As String = "A10"
+Private Const RESULTS_TOPLEFT As String = "A11"
 Private Const HELPER_COMPID_TOPLEFT As String = "J2"
 Private Const HELPER_SUPPLIER_TOPLEFT As String = "K2"
 Private Const HELPER_DESCRIPTION_TOPLEFT As String = "L2"
 Private Const HELPER_REV_TOPLEFT As String = "M2"
+Private Const HELPER_BOMTARGET_TOPLEFT As String = "N2"
 
 ' Default settings
 Private Const DEFAULT_ACTIVEONLY As Boolean = True
@@ -272,7 +276,7 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
     End If
 
     Set wb = ThisWorkbook
-    Set loBom = ResolveTargetTable(wb, PickerTarget_BOM)
+    Set loBom = GetActiveBomTable()
     Set wsComps = wb.Worksheets(SH_COMPS)
     Set loComps = wsComps.ListObjects(LO_COMPS)
 
@@ -413,10 +417,12 @@ End Sub
 
 Private Function ResolveTargetTable(ByVal wb As Workbook, ByVal targetContext As PickerTargetContext) As ListObject
     Dim ws As Worksheet
+    Dim bomTab As String
 
     Select Case targetContext
         Case PickerTarget_BOM
-            Set ResolveTargetTable = GetActiveBomTable()
+            bomTab = SafeText(wb.Worksheets(SH_PICKERS).Range(CELL_BOMTARGET).Value)
+            Set ResolveTargetTable = ResolveBomTableFromPickerSelection(wb, bomTab)
 
         Case PickerTarget_PO
             Set ws = wb.Worksheets(SH_POLINES)
@@ -559,6 +565,7 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
     ws.Range("A6").Value = "CompID (optional exact match)"
     ws.Range("A7").Value = "Supplier (optional exact match; dropdown)"
     ws.Range("A8").Value = "Description (optional contains/wildcard)"
+    ws.Range("A9").Value = "Target BOM (dropdown from BOMS)"
 
     If Len(SafeText(ws.Range(CELL_SEARCH).Value)) = 0 Then ws.Range(CELL_SEARCH).Value = ""
     If Len(SafeText(ws.Range(CELL_REV).Value)) = 0 Then ws.Range(CELL_REV).Value = ""
@@ -567,8 +574,9 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
     If Len(SafeText(ws.Range(CELL_COMPID).Value)) = 0 Then ws.Range(CELL_COMPID).Value = ""
     If Len(SafeText(ws.Range(CELL_SUPPLIER).Value)) = 0 Then ws.Range(CELL_SUPPLIER).Value = ""
     If Len(SafeText(ws.Range(CELL_DESCRIPTION).Value)) = 0 Then ws.Range(CELL_DESCRIPTION).Value = ""
+    If Len(SafeText(ws.Range(CELL_BOMTARGET).Value)) = 0 Then ws.Range(CELL_BOMTARGET).Value = ""
 
-    ws.Range("A9").Value = "Results (filter/sort, select rows, then run add macro):"
+    ws.Range("A10").Value = "Results (filter/sort, select rows, select target BOM, then run add macro):"
 
     Set lo = Nothing
     On Error Resume Next
@@ -610,8 +618,13 @@ Private Sub EnsurePickerSheetAndTable(ByVal wb As Workbook)
         End If
     End If
 
-    ws.Columns("J:M").EntireColumn.Hidden = True
+    ws.Columns("J:N").EntireColumn.Hidden = True
     RebuildPickerDropdownLists wb, ws
+    If Len(SafeText(ws.Range(CELL_BOMTARGET).Value)) = 0 Then
+        If Len(SafeText(ws.Range(HELPER_BOMTARGET_TOPLEFT).Value)) > 0 Then
+            ws.Range(CELL_BOMTARGET).Value = ws.Range(HELPER_BOMTARGET_TOPLEFT).Value
+        End If
+    End If
 
     Exit Sub
 
@@ -657,7 +670,8 @@ Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Wor
     Dim arr As Variant
     Dim r As Long
     Dim dicCompId As Object, dicSup As Object, dicDesc As Object, dicRev As Object
-    Dim compIdTop As Range, supTop As Range, descTop As Range, revTop As Range
+    Dim dicBomTabs As Object
+    Dim compIdTop As Range, supTop As Range, descTop As Range, revTop As Range, bomTop As Range
     Dim key As Variant
     Dim outRow As Long
 
@@ -712,11 +726,15 @@ Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Wor
         End If
     End If
 
+
+    BuildBomTargetOptions wb, dicBomTabs
+
     wsPick.Range("J1").Value = "CompIDOptions"
     wsPick.Range("K1").Value = "SupplierOptions"
     wsPick.Range("L1").Value = "DescriptionOptions"
     wsPick.Range("M1").Value = "RevisionOptions"
-    wsPick.Range("J2:M5000").ClearContents
+    wsPick.Range("N1").Value = "BomTargetOptions"
+    wsPick.Range("J2:N5000").ClearContents
 
     Set compIdTop = wsPick.Range(HELPER_COMPID_TOPLEFT)
     outRow = 0
@@ -746,15 +764,82 @@ Private Sub RebuildPickerDropdownLists(ByVal wb As Workbook, ByVal wsPick As Wor
         revTop.Offset(outRow - 1, 0).Value = CStr(key)
     Next key
 
+    Set bomTop = wsPick.Range(HELPER_BOMTARGET_TOPLEFT)
+    outRow = 0
+    If Not dicBomTabs Is Nothing Then
+        For Each key In dicBomTabs.Keys
+            outRow = outRow + 1
+            bomTop.Offset(outRow - 1, 0).Value = CStr(key)
+        Next key
+    End If
+
     ApplyValidationListFromRange wsPick.Range(CELL_COMPID), wsPick.Range("J2:J5000")
     ApplyValidationListFromRange wsPick.Range(CELL_SUPPLIER), wsPick.Range("K2:K5000")
     ApplyValidationListFromRange wsPick.Range(CELL_DESCRIPTION), wsPick.Range("L2:L5000")
     ApplyValidationListFromRange wsPick.Range(CELL_REV), wsPick.Range("M2:M5000")
+    ApplyValidationListFromRange wsPick.Range(CELL_BOMTARGET), wsPick.Range("N2:N5000")
     ApplyValidationInline wsPick.Range(CELL_ACTIVEONLY), "TRUE,FALSE"
     Exit Sub
 
 EH:
     ' Non-fatal helper; picker remains usable without dropdowns
+End Sub
+
+Private Sub BuildBomTargetOptions(ByVal wb As Workbook, ByRef dicBomTabs As Object)
+    Dim wsBoms As Worksheet
+    Dim loBoms As ListObject
+    Dim idxBomTab As Long, idxBomId As Long
+    Dim arrBomTab As Variant, arrBomId As Variant
+    Dim i As Long
+    Dim bomTab As String, bomId As String
+    Dim includeRow As Boolean
+    Dim hasEditable As Boolean
+    Dim dicAll As Object
+
+    Set dicBomTabs = CreateObject("Scripting.Dictionary")
+    dicBomTabs.CompareMode = vbTextCompare
+
+    Set dicAll = CreateObject("Scripting.Dictionary")
+    dicAll.CompareMode = vbTextCompare
+
+    On Error GoTo CleanFail
+
+    Set wsBoms = wb.Worksheets(SH_BOMS)
+    Set loBoms = wsBoms.ListObjects(LO_BOMS)
+    If loBoms.DataBodyRange Is Nothing Then Exit Sub
+
+    idxBomTab = GetColIndex(loBoms, "BOMTab")
+    idxBomId = GetColIndex(loBoms, "BOMID")
+    If idxBomTab = 0 Then Exit Sub
+
+    arrBomTab = loBoms.ListColumns(idxBomTab).DataBodyRange.Value
+    If idxBomId > 0 Then arrBomId = loBoms.ListColumns(idxBomId).DataBodyRange.Value
+
+    For i = 1 To UBound(arrBomTab, 1)
+        bomTab = SafeText(arrBomTab(i, 1))
+        If Len(bomTab) = 0 Then GoTo NextRow
+
+        dicAll(bomTab) = True
+
+        includeRow = True
+        If idxBomId > 0 Then
+            bomId = SafeText(arrBomId(i, 1))
+            If Len(bomId) > 0 Then includeRow = M_Data_BOMs_Status.CanEditBom(bomId)
+        End If
+
+        If includeRow Then
+            dicBomTabs(bomTab) = True
+            hasEditable = True
+        End If
+
+NextRow:
+    Next i
+
+    If Not hasEditable Then Set dicBomTabs = dicAll
+    Exit Sub
+
+CleanFail:
+    Set dicBomTabs = dicAll
 End Sub
 
 Private Sub ApplyValidationInline(ByVal targetCell As Range, ByVal csvList As String)
@@ -1143,6 +1228,42 @@ Private Function GateReady_Safe(Optional ByVal showUserMessage As Boolean = True
     Exit Function
 EH:
     GateReady_Safe = False
+End Function
+
+Private Function ResolveBomTableFromPickerSelection(ByVal wb As Workbook, ByVal bomTab As String) As ListObject
+    Const PROC_NAME As String = "M_Data_BOMs_Picker.ResolveBomTableFromPickerSelection"
+
+    Dim wsBom As Worksheet
+    Dim loBom As ListObject
+
+    bomTab = Trim$(bomTab)
+    If Len(bomTab) = 0 Then
+        Err.Raise vbObjectError + 8305, PROC_NAME, "Pickers target BOM is blank. Select a BOM in " & SH_PICKERS & "!" & CELL_BOMTARGET & "."
+    End If
+
+    On Error Resume Next
+    Set wsBom = wb.Worksheets(bomTab)
+    On Error GoTo 0
+
+    If wsBom Is Nothing Then
+        Err.Raise vbObjectError + 8306, PROC_NAME, "Worksheet '" & bomTab & "' from picker target does not exist."
+    End If
+
+    If wsBom.ListObjects.Count < 1 Then
+        Err.Raise vbObjectError + 8307, PROC_NAME, "Target BOM sheet '" & bomTab & "' has no table (ListObject)."
+    End If
+
+    Set loBom = wsBom.ListObjects(1)
+
+    RequireColumn loBom, "CompID"
+    RequireColumn loBom, "OurPN"
+    RequireColumn loBom, "OurRev"
+    RequireColumn loBom, "Description"
+    RequireColumn loBom, "UOM"
+    RequireColumn loBom, "QtyPer"
+    RequireColumn loBom, "CompNotes"
+
+    Set ResolveBomTableFromPickerSelection = loBom
 End Function
 
 Private Function GetActiveBomTable() As ListObject

@@ -44,14 +44,16 @@ Note on Gate popups: successful Gate checks are now silent by default; failures 
 > If nothing is selected, add macros now offer: **Yes = use all displayed rows**, **No = open PN/Rev dialog (BOM flow)**, **Cancel = stop**.
 
 ### A) Add to BOM
-1. Navigate to the destination BOM sheet and ensure the BOM table is the first ListObject on that sheet.
-2. Run: `UI_Add_SelectedPickerRows_To_ActiveBOM`
-3. Enter default quantity when prompted.
-4. Choose quantity mode:
+1. Stay on `Pickers`, select one or more rows in `Pickers!TBL_PICK_RESULTS`.
+2. Choose the destination BOM in `Pickers!B9` (**Target BOM**, dropdown sourced from `BOMS.TBL_BOMS[BOMTab]`).
+3. Run: `UI_Add_SelectedPickerRows_To_ActiveBOM`
+4. Enter default quantity when prompted.
+5. Choose quantity mode:
    - **No**: apply default quantity to all selected rows
    - **Yes**: prompt for each selected row quantity
 
 Behavior:
+- Picker-driven BOM adds resolve the target BOM from `Pickers!B9`; no BOM sheet switch is required.
 - If PN+Rev already exists in BOM, `QtyPer` is incremented.
 - If PN+Rev is new, a row is inserted.
 
