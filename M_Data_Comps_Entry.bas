@@ -290,7 +290,9 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "IsBuildable", buildable
 
     If Not M_Core_DataIntegrity.RunDataCheck(False) Then
-        abortedReason = "Schema/data integrity requirements failed after component entry."
+        abortedReason = "Schema/data integrity requirements failed after component entry. " & DataCheckSummary()
+        M_Core_Logging.LogWarn PROC_NAME, "Data integrity failed after component entry", _
+            "CompID=" & compId & "; Details=" & DataCheckSummary()
         GoTo FailRollback
     End If
 
@@ -996,3 +998,28 @@ Private Sub GoToLogSheet()
     ThisWorkbook.Worksheets("Log").Activate
     On Error GoTo 0
 End Sub
+
+Private Function DataCheckSummary() As String
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim r As Long
+    Dim detail As String
+
+    On Error GoTo Fallback
+    Set ws = ThisWorkbook.Worksheets("Data_Check")
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    If lastRow < 2 Then GoTo Fallback
+
+    For r = 2 To lastRow
+        If Len(Trim$(CStr(ws.Cells(r, 1).Value))) > 0 Then
+            detail = CStr(ws.Cells(r, 1).Value)
+            If Len(Trim$(CStr(ws.Cells(r, 2).Value))) > 0 Then detail = detail & " | " & CStr(ws.Cells(r, 2).Value)
+            If Len(Trim$(CStr(ws.Cells(r, 5).Value))) > 0 Then detail = detail & " | " & CStr(ws.Cells(r, 5).Value)
+            DataCheckSummary = detail
+            Exit Function
+        End If
+    Next r
+
+Fallback:
+    DataCheckSummary = "See Data_Check tab for failed rule details."
+End Function

@@ -111,7 +111,7 @@ CleanExit:
 
 EH:
     MsgBox "Picker open/refresh failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Component Picker"
 End Sub
 
 ' Optional userform wrapper hook (if a custom UF_ComponentPicker exists).
@@ -124,7 +124,7 @@ Public Sub UI_Open_ComponentPicker_Form_Optional()
 Fallback:
     Err.Clear
     UI_Open_ComponentPicker
-    MsgBox "UF_ComponentPicker was not found. Opened the sheet-based picker instead.", vbInformation, "Component Picker"
+    MsgBox "UF_ComponentPicker was not found. Opened the sheet-based picker instead.", vbOKOnly, "Component Picker"
 End Sub
 
 Public Sub UI_Refresh_PickerResults()
@@ -141,7 +141,7 @@ CleanExit:
 
 EH:
     MsgBox "Picker refresh failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Component Picker"
 End Sub
 
 Public Sub UI_Add_SelectedPickerRows_To_ActiveBOM()
@@ -189,7 +189,7 @@ Public Sub UI_Add_ComponentByPNRev_To_ActiveBOM()
 
 EH:
     MsgBox "Add-by-PN/Rev failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Component Picker"
 End Sub
 
 Private Function ResolveRevisionForPN(ByVal loComps As ListObject, ByVal pn As String, ByRef revOut As String) As Boolean
@@ -227,7 +227,7 @@ Private Function ResolveRevisionForPN(ByVal loComps As ListObject, ByVal pn As S
     Next i
 
     If dicRev.Count = 0 Then
-        MsgBox "No active revisions found for PN: " & pn, vbExclamation, "Component Picker"
+        MsgBox "No active revisions found for PN: " & pn, vbOKOnly, "Component Picker"
         Exit Function
     End If
 
@@ -247,7 +247,7 @@ Private Function ResolveRevisionForPN(ByVal loComps As ListObject, ByVal pn As S
     If Len(enteredRev) = 0 Then Exit Function
 
     If Not dicRev.Exists(enteredRev) Then
-        MsgBox "Revision '" & enteredRev & "' is not an active revision for PN " & pn & ".", vbExclamation, "Component Picker"
+        MsgBox "Revision '" & enteredRev & "' is not an active revision for PN " & pn & ".", vbOKOnly, "Component Picker"
         Exit Function
     End If
 
@@ -267,7 +267,7 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
     On Error GoTo EH
 
     If qtyPer <= 0 Then
-        MsgBox "QtyPer must be > 0.", vbExclamation, "Component Picker"
+        MsgBox "QtyPer must be > 0.", vbOKOnly, "Component Picker"
         Exit Sub
     End If
 
@@ -283,7 +283,7 @@ Public Sub AddComponentToActiveBOM(ByVal pn As String, ByVal rev As String, ByVa
 
 EH:
     MsgBox "Add component failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Component Picker"
 End Sub
 
 '==========================
@@ -306,7 +306,7 @@ Private Sub UI_Add_SelectedPickerRows_ToContext(ByVal targetContext As PickerTar
     Set loPick = wsPick.ListObjects(LO_PICK_RESULTS)
 
     If loPick.DataBodyRange Is Nothing Then
-        MsgBox "No picker results to add.", vbInformation, "Component Picker"
+        MsgBox "No picker results to add.", vbOKOnly, "Component Picker"
         Exit Sub
     End If
 
@@ -338,7 +338,7 @@ Private Sub UI_Add_SelectedPickerRows_ToContext(ByVal targetContext As PickerTar
     End If
 
     If rowIndices.Count = 0 Then
-        MsgBox "No picker rows were provided to add.", vbExclamation, "Component Picker"
+        MsgBox "No picker rows were provided to add.", vbOKOnly, "Component Picker"
         Exit Sub
     End If
 
@@ -353,13 +353,13 @@ Private Sub UI_Add_SelectedPickerRows_ToContext(ByVal targetContext As PickerTar
     AddPickedRowsToTarget wb, loPick, rowIndices, targetContext, qtyDefault, promptPerRowQty
 
     If M_Core_UX.ShouldShowSuccessMessage("BOM_Picker_Add_Flows") Then
-        MsgBox "Selected components processed for " & ContextLabel(targetContext) & ".", vbInformation, "Component Picker"
+        MsgBox "Selected components processed for " & ContextLabel(targetContext) & ".", vbOKOnly, "Component Picker"
     End If
     Exit Sub
 
 EH:
     MsgBox "Add selected components failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Component Picker"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Component Picker"
 End Sub
 
 Private Sub AddPickedRowsToTarget(ByVal wb As Workbook, ByVal loPick As ListObject, ByVal rowIndices As Collection, _
@@ -1218,7 +1218,7 @@ Private Function Comps_LookupActive(ByVal loComps As ListObject, ByVal pn As Str
 
     If loComps Is Nothing Then Exit Function
     If loComps.DataBodyRange Is Nothing Then
-        MsgBox "Comps table has no data.", vbExclamation, "Component Picker"
+        MsgBox "Comps table has no data.", vbOKOnly, "Component Picker"
         Exit Function
     End If
 
@@ -1245,7 +1245,7 @@ Private Function Comps_LookupActive(ByVal loComps As ListObject, ByVal pn As Str
            StrComp(SafeText(arrRev(i, 1)), rev, vbTextCompare) = 0 Then
 
             If StrComp(SafeText(arrRS(i, 1)), activeLabel, vbTextCompare) <> 0 Then
-                MsgBox "Component is not active: " & pn & " / " & rev, vbExclamation, "Component Picker"
+                MsgBox "Component is not active: " & pn & " / " & rev, vbOKOnly, "Component Picker"
                 Exit Function
             End If
 
@@ -1258,7 +1258,7 @@ Private Function Comps_LookupActive(ByVal loComps As ListObject, ByVal pn As Str
         End If
     Next i
 
-    MsgBox "Component not found in Comps: " & pn & " / " & rev, vbExclamation, "Component Picker"
+    MsgBox "Component not found in Comps: " & pn & " / " & rev, vbOKOnly, "Component Picker"
 End Function
 
 Private Sub SetByHeader(ByVal lo As ListObject, ByVal lr As ListRow, ByVal header As String, ByVal v As Variant)

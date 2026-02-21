@@ -152,7 +152,7 @@ Public Sub Dev_RefreshAutomationRegistry( _
                "Updated: " & updatedCount & vbCrLf & _
                IIf(flagStale, "Stale flagged: " & staleCount & vbCrLf, vbNullString) & _
                "DryRun: " & CStr(dryRun), _
-               vbInformation, "Registry Refresh"
+               vbOKOnly, "Registry Refresh"
     End If
 
 CleanExit:
@@ -165,7 +165,7 @@ EH:
                "Error " & Err.Number & ": " & Err.Description & vbCrLf & vbCrLf & _
                "If this mentions VBProject access, enable:" & vbCrLf & _
                "Trust Center > Macro Settings > Trust access to the VBA project object model.", _
-               vbExclamation, "Registry Refresh"
+               vbOKOnly, "Registry Refresh"
     End If
     Resume CleanExit
 End Sub

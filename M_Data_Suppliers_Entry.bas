@@ -137,7 +137,12 @@ Public Sub NewSupplier()
     StampAuditIfPresent lo, lr, userId, nowStamp
 
     If Not M_Core_DataIntegrity.RunDataCheck(False) Then
-        MsgBox "Supplier was rolled back because schema/data integrity requirements failed.", vbOKOnly, "New Supplier"
+        Dim diSummary As String
+        diSummary = DataCheckSummary()
+        M_Core_Logging.LogWarn PROC_NAME, "Data integrity failed after supplier entry", _
+            "SupplierID=" & supplierId & "; Details=" & diSummary & "; ModuleVersion=" & MODULE_VERSION
+        MsgBox "Supplier was rolled back because schema/data integrity requirements failed." & vbCrLf & _
+               diSummary, vbOKOnly, "New Supplier"
         GoTo FailAndRollback
     End If
 
@@ -548,3 +553,28 @@ Private Sub GoToLogSheet()
     ThisWorkbook.Worksheets("Log").Activate
     On Error GoTo 0
 End Sub
+
+Private Function DataCheckSummary() As String
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim r As Long
+    Dim detail As String
+
+    On Error GoTo Fallback
+    Set ws = ThisWorkbook.Worksheets("Data_Check")
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    If lastRow < 2 Then GoTo Fallback
+
+    For r = 2 To lastRow
+        If Len(Trim$(CStr(ws.Cells(r, 1).Value))) > 0 Then
+            detail = CStr(ws.Cells(r, 1).Value)
+            If Len(Trim$(CStr(ws.Cells(r, 2).Value))) > 0 Then detail = detail & " | " & CStr(ws.Cells(r, 2).Value)
+            If Len(Trim$(CStr(ws.Cells(r, 5).Value))) > 0 Then detail = detail & " | " & CStr(ws.Cells(r, 5).Value)
+            DataCheckSummary = detail
+            Exit Function
+        End If
+    Next r
+
+Fallback:
+    DataCheckSummary = "See Data_Check tab for failed rule details."
+End Function

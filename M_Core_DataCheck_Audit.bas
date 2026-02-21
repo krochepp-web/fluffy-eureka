@@ -32,7 +32,7 @@ Public Sub Audit_DataCheck_Summary()
     Set wb = ThisWorkbook
 
     If Not WorksheetExists(wb, SRC_SHEET) Then
-        MsgBox "Missing sheet: " & SRC_SHEET, vbExclamation, "Audit_DataCheck_Summary"
+        MsgBox "Missing sheet: " & SRC_SHEET, vbOKOnly, "Audit_DataCheck_Summary"
         Exit Sub
     End If
     Set wsSrc = wb.Worksheets(SRC_SHEET)
@@ -45,7 +45,7 @@ Public Sub Audit_DataCheck_Summary()
     If lastRow < 2 Then
         wsOut.Columns("A:D").AutoFit
         MsgBox "No issues found (Data_Check has no rows)." & vbCrLf & _
-               "Created '" & OUT_SHEET & "' summary (empty).", vbInformation, "Audit_DataCheck_Summary"
+               "Created '" & OUT_SHEET & "' summary (empty).", vbOKOnly, "Audit_DataCheck_Summary"
         Exit Sub
     End If
 
@@ -87,12 +87,12 @@ NextR:
     wsOut.Range("A1:D" & outRow - 1).Sort Key1:=wsOut.Range("D2"), Order1:=xlDescending, header:=xlYes
     wsOut.Columns("A:D").AutoFit
 
-    MsgBox "Created '" & OUT_SHEET & "' summary.", vbInformation, "Audit_DataCheck_Summary"
+    MsgBox "Created '" & OUT_SHEET & "' summary.", vbOKOnly, "Audit_DataCheck_Summary"
     Exit Sub
 
 EH:
     MsgBox "Audit_DataCheck_Summary failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Audit_DataCheck_Summary"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Audit_DataCheck_Summary"
 End Sub
 
 Private Function EnsureWorksheet(ByVal wb As Workbook, ByVal sheetName As String) As Worksheet

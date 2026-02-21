@@ -40,7 +40,7 @@ Public Sub UI_Recalc_Demand_From_WOS_BOM()
 EH:
     M_Core_Logging.LogError PROC_NAME, "UI demand recalc failed", Err.Description, Err.Number
     MsgBox "Demand recalculation failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Demand"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Demand"
 End Sub
 
 Public Sub Recalc_Demand_From_WOS_BOM(Optional ByVal showUserMessage As Boolean = True)
@@ -85,7 +85,7 @@ Public Sub Recalc_Demand_From_WOS_BOM(Optional ByVal showUserMessage As Boolean 
 
     If showUserMessage Then
         MsgBox "Demand recalculated successfully." & vbCrLf & _
-               "Demand rows: " & CStr(dictDemand.Count), vbInformation, "Demand"
+               "Demand rows: " & CStr(dictDemand.Count), vbOKOnly, "Demand"
     End If
 
     Exit Sub
@@ -94,7 +94,7 @@ EH:
     M_Core_Logging.LogError PROC_NAME, "Demand recalculation failed", Err.Description, Err.Number
     If showUserMessage Then
         MsgBox "Demand recalculation failed." & vbCrLf & _
-               "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Demand"
+               "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Demand"
     End If
 End Sub
 

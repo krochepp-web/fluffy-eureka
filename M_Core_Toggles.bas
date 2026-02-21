@@ -120,7 +120,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error entering critical section", Err.Description, Err.Number, activityId
     MsgBox "Error entering critical section." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Application State"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Application State"
     ' Do not raise further; better to leave state unchanged than crash.
     Resume CleanExit
 End Sub
@@ -161,7 +161,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error exiting critical section", Err.Description, Err.Number, activityId
     MsgBox "Error exiting critical section." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Application State"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Application State"
     ' Best effort to restore state even on error.
     Resume CleanExit
 End Sub
@@ -227,7 +227,7 @@ Public Sub Test_Core_Toggles()
     Debug.Print msg
     
     MsgBox "Test_Core_Toggles completed. Check Immediate Window for state snapshots.", _
-           vbInformation, PROC_NAME
+           vbOKOnly, PROC_NAME
     
 CleanExit:
     Exit Sub
@@ -236,7 +236,7 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in Test_Core_Toggles", Err.Description, Err.Number
     MsgBox "Error in Test_Core_Toggles." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbCritical, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub
 

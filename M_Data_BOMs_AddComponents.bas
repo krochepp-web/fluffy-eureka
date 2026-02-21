@@ -24,12 +24,12 @@ Public Sub UI_Add_Components_To_BOM()
     MsgBox "UI_Add_Components_To_BOM is deprecated." & vbCrLf & _
            "Use picker-based add flows instead." & vbCrLf & vbCrLf & _
            "Routing to UI_Add_ComponentByPNRev_To_ActiveBOM...", _
-           vbInformation, "Add Components to BOM"
+           vbOKOnly, "Add Components to BOM"
 
     M_Data_BOMs_Picker.UI_Add_ComponentByPNRev_To_ActiveBOM
     Exit Sub
 
 EH:
     MsgBox "Legacy wrapper failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Add Components to BOM"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Add Components to BOM"
 End Sub

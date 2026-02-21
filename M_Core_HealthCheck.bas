@@ -98,7 +98,7 @@ Private Sub HealthCheck_RunAll(Optional ByVal showUserMessage As Boolean = True)
            "; GateRan=" & BoolToYesNo(ranGate) & "; Gate=" & VariantToText(gateOk)
 
     If showUserMessage Then
-        MsgBox msg, IIf(schemaOk And dataOk, vbInformation, vbExclamation), "Health Check"
+        MsgBox msg, IIf(schemaOk And dataOk, vbOKOnly, vbOKOnly), "Health Check"
     End If
 
 CleanExit:
@@ -108,7 +108,7 @@ EH:
     TryLog PROC_NAME, Err.Number, Err.Description, "Unhandled error in health check."
     If showUserMessage Then
         MsgBox "HealthCheck_RunAll failed." & vbCrLf & _
-               "Error " & Err.Number & ": " & Err.Description, vbCritical, "Health Check"
+               "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Health Check"
     End If
     Resume CleanExit
 End Sub

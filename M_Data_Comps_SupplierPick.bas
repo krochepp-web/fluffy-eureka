@@ -54,9 +54,9 @@ Public Sub Test_SupplierSearch()
         MsgBox "Selected:" & vbCrLf & _
                "SupplierName: " & supplierName & vbCrLf & _
                "SupplierID: " & supplierId & vbCrLf & _
-               "SupplierDefaultLT: " & CStr(supplierDefaultLT), vbInformation, "Test Supplier Search"
+               "SupplierDefaultLT: " & CStr(supplierDefaultLT), vbOKOnly, "Test Supplier Search"
     Else
-        MsgBox "Cancelled (no selection).", vbInformation, "Test Supplier Search"
+        MsgBox "Cancelled (no selection).", vbOKOnly, "Test Supplier Search"
     End If
 End Sub
 
@@ -85,12 +85,12 @@ Public Function SupplierPick_ByName(ByVal loSupp As ListObject, ByRef supplierId
     supplierDefaultLT = vbNullString
 
     If loSupp Is Nothing Then
-        MsgBox "Suppliers table reference is Nothing.", vbExclamation, title
+        MsgBox "Suppliers table reference is Nothing.", vbOKOnly, title
         Exit Function
     End If
 
     If loSupp.DataBodyRange Is Nothing Then
-        MsgBox "Suppliers table '" & loSupp.Name & "' has no rows.", vbExclamation, title
+        MsgBox "Suppliers table '" & loSupp.Name & "' has no rows.", vbOKOnly, title
         Exit Function
     End If
 
@@ -108,7 +108,7 @@ Public Function SupplierPick_ByName(ByVal loSupp As ListObject, ByRef supplierId
                "  SupplierName=" & CStr(idxName) & vbCrLf & _
                "  SupplierDefaultLT=" & CStr(idxLT) & vbCrLf & vbCrLf & _
                "Action: rename the table headers to match exactly, or update the code to your actual header text.", _
-               vbExclamation, title
+               vbOKOnly, title
         Exit Function
     End If
 
@@ -171,7 +171,7 @@ RetrySearch:
               "Try a shorter fragment (e.g., THREAD), or omit punctuation." & vbCrLf & _
               "If you expected a match, verify the supplier name exists in Suppliers.TBL_SUPPLIERS[SupplierName]."
 
-        MsgBox msg, vbExclamation, title
+        MsgBox msg, vbOKOnly, title
         GoTo RetrySearch
     End If
 
@@ -201,13 +201,13 @@ RetryPick:
     If Len(choiceText) = 0 Then GoTo RetrySearch
 
     If Not IsNumeric(choiceText) Then
-        MsgBox "Please enter a valid number from the list.", vbExclamation, title
+        MsgBox "Please enter a valid number from the list.", vbOKOnly, title
         GoTo RetryPick
     End If
 
     choiceN = CLng(choiceText)
     If choiceN < 1 Or choiceN > hitCount Then
-        MsgBox "Choice out of range. Pick a number shown in the list.", vbExclamation, title
+        MsgBox "Choice out of range. Pick a number shown in the list.", vbOKOnly, title
         GoTo RetryPick
     End If
 

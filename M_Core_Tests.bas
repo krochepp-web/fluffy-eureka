@@ -57,6 +57,7 @@ Public Sub Test_Core_Constants()
     Dim lo As ListObject
     
     Dim NextRow As Long
+    Dim failCount As Long
     
     On Error GoTo EH
     
@@ -159,15 +160,18 @@ Public Sub Test_Core_Constants()
     ' Autofit and finish
     '---------------------------------------------------------------------------
     wsReport.Columns("A:E").AutoFit
-    
-    MsgBox "Core constants test complete. See 'Core_Tests' sheet.", vbInformation, PROC_NAME
+
+    failCount = CountStatusRows(wsReport, "FAIL")
+    If failCount > 0 Then
+        MsgBox "Core constants test found " & CStr(failCount) & " failing checks. See 'Core_Tests' sheet.", vbOKOnly, PROC_NAME
+    End If
     
 CleanExit:
     Exit Sub
     
 EH:
     Debug.Print "Error in " & PROC_NAME & ": " & Err.Number & " - " & Err.Description
-    MsgBox "Error " & Err.Number & " in " & PROC_NAME & ": " & Err.Description, vbCritical, PROC_NAME
+    MsgBox "Error " & Err.Number & " in " & PROC_NAME & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub
 
@@ -440,3 +444,15 @@ Private Sub Test_TableColumns( _
 End Sub
 
 
+
+Private Function CountStatusRows(ByVal ws As Worksheet, ByVal statusName As String) As Long
+    Dim lastRow As Long
+    Dim r As Long
+
+    lastRow = ws.Cells(ws.Rows.Count, 4).End(xlUp).Row
+    For r = 2 To lastRow
+        If StrComp(Trim$(CStr(ws.Cells(r, 4).Value)), statusName, vbTextCompare) = 0 Then
+            CountStatusRows = CountStatusRows + 1
+        End If
+    Next r
+End Function

@@ -95,7 +95,7 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in ConfirmProceed", Err.Description, Err.Number
     MsgBox "Error in " & PROC_NAME & "." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     ConfirmProceed = False
     Resume CleanExit
 End Function
@@ -132,7 +132,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error retrieving ListObject '" & tableName & "'", Err.Description, Err.Number
     MsgBox "Error retrieving ListObject '" & tableName & "'." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Set SafeGetListObject = Nothing
     Resume CleanExit
 End Function
@@ -173,7 +173,7 @@ EH:
              "Error checking table presence: " & sheetName & "." & tableName, _
              Err.Description, Err.Number
     MsgBox "Error checking table presence: " & sheetName & "." & tableName & "." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     IsTablePresent = False
     Resume CleanExit
 End Function
@@ -208,7 +208,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error checking column presence: " & columnName, Err.Description, Err.Number
     MsgBox "Error checking column presence: " & columnName & "." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     IsColumnPresent = False
     Resume CleanExit
 End Function
@@ -252,7 +252,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error getting column index: " & columnName, Err.Description, Err.Number
     MsgBox "Error getting column index: " & columnName & "." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     GetColumnIndexByName = 0
     Resume CleanExit
 End Function
@@ -296,7 +296,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error in SafeGetValue for column '" & columnName & "'", Err.Description, Err.Number
     MsgBox "Error in SafeGetValue for column '" & columnName & "'." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     SafeGetValue = defaultValue
     Resume CleanExit
 End Function
@@ -334,7 +334,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error in SafeSetValue for column '" & columnName & "'", Err.Description, Err.Number
     MsgBox "Error in SafeSetValue for column '" & columnName & "'." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub
 
@@ -365,7 +365,7 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in ListObjectToArray", Err.Description, Err.Number
     MsgBox "Error in ListObjectToArray." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Erase ListObjectToArray
     Resume CleanExit
 End Function
@@ -427,7 +427,7 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in ArrayToListObject", Err.Description, Err.Number
     MsgBox "Error in ArrayToListObject." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub
 
@@ -496,7 +496,7 @@ EH:
              "Error in BuildDictionaryByColumn for column '" & keyColumnName & "'", _
              Err.Description, Err.Number
     MsgBox "Error in BuildDictionaryByColumn for column '" & keyColumnName & "'." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Set BuildDictionaryByColumn = Nothing
     Resume CleanExit
 End Function
@@ -530,7 +530,7 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in NormalizeString", Err.Description, Err.Number
     MsgBox "Error in NormalizeString." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     NormalizeString = value
     Resume CleanExit
 End Function
@@ -559,7 +559,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error in Utils_GenerateActivityId", Err.Description, Err.Number
     MsgBox "Error in Utils_GenerateActivityId." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Utils_GenerateActivityId = procName & "_ERROR"
     Resume CleanExit
 End Function
@@ -598,14 +598,14 @@ Public Sub Test_Core_Utils()
     Set lo = SafeGetListObject(ws, "TBL_SUPPLIERS")
     
     If lo Is Nothing Then
-        MsgBox "Test_Core_Utils: TBL_SUPPLIERS not found on Suppliers sheet.", vbExclamation, PROC_NAME
+        MsgBox "Test_Core_Utils: TBL_SUPPLIERS not found on Suppliers sheet.", vbOKOnly, PROC_NAME
         GoTo CleanExit
     End If
     
     ' Build dictionary on SupplierID
     Set dic = BuildDictionaryByColumn(lo, "SupplierID")
     If dic Is Nothing Then
-        MsgBox "Test_Core_Utils: Failed to build dictionary on SupplierID.", vbExclamation, PROC_NAME
+        MsgBox "Test_Core_Utils: Failed to build dictionary on SupplierID.", vbOKOnly, PROC_NAME
         GoTo CleanExit
     End If
     
@@ -619,7 +619,7 @@ Public Sub Test_Core_Utils()
         Debug.Print "Test_Core_Utils: SupplierID=" & firstKey & " Name=" & sampleValue
     End If
     
-    MsgBox "Test_Core_Utils completed. Check Immediate Window for details.", vbInformation, PROC_NAME
+    MsgBox "Test_Core_Utils completed. Check Immediate Window for details.", vbOKOnly, PROC_NAME
     
 CleanExit:
     Exit Sub
@@ -628,7 +628,7 @@ EH:
     On Error Resume Next
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in Test_Core_Utils", Err.Description, Err.Number
     MsgBox "Error in Test_Core_Utils." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbCritical, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub
 

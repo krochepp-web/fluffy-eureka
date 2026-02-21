@@ -90,9 +90,9 @@ Public Function Validate_DataIntegrity_All(Optional ByVal showUserMessage As Boo
 
     If showUserMessage Then
         If Validate_DataIntegrity_All Then
-            MsgBox "Data Integrity: PASS (0 issues).", vbInformation, "Data Integrity Check"
+            MsgBox "Data Integrity: PASS (0 issues).", vbOKOnly, "Data Integrity Check"
         Else
-            MsgBox "Data Integrity: FAIL (" & CStr(issueCount) & " issues). See 'Data_Check' tab.", vbExclamation, "Data Integrity Check"
+            MsgBox "Data Integrity: FAIL (" & CStr(issueCount) & " issues). See 'Data_Check' tab.", vbOKOnly, "Data Integrity Check"
         End If
     End If
 
@@ -104,7 +104,7 @@ EH:
     M_Core_Logging.LogEvent PROC_NAME, Err.Number, Err.Description, "Unhandled error"
     On Error GoTo 0
     MsgBox "Data Integrity validation failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Validate_DataIntegrity_All"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Validate_DataIntegrity_All"
     Validate_DataIntegrity_All = False
 End Function
 

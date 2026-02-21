@@ -52,7 +52,7 @@ CleanExit:
 EH:
     Debug.Print "Error in " & PROC_NAME & ": " & Err.Number & " - " & Err.Description
     If showUserMessage Then
-        MsgBox "Error " & Err.Number & " in " & PROC_NAME & ": " & Err.Description, vbCritical, PROC_NAME
+        MsgBox "Error " & Err.Number & " in " & PROC_NAME & ": " & Err.Description, vbOKOnly, PROC_NAME
     End If
     Resume CleanExit
 End Sub
@@ -128,7 +128,7 @@ Public Sub Schema_Validate_All(Optional ByVal showUserMessage As Boolean = True)
     Set wsSchema = SafeGetWorksheet(wb, "SCHEMA")
     If wsSchema Is Nothing Then
         If showUserMessage Then
-            MsgBox "Missing sheet: SCHEMA", vbCritical, PROC_NAME
+            MsgBox "Missing sheet: SCHEMA", vbOKOnly, PROC_NAME
         End If
         Exit Sub
     End If
@@ -136,7 +136,7 @@ Public Sub Schema_Validate_All(Optional ByVal showUserMessage As Boolean = True)
     Set loSchema = SafeGetListObject(wsSchema, "TBL_SCHEMA")
     If loSchema Is Nothing Then
         If showUserMessage Then
-            MsgBox "Missing table: SCHEMA!TBL_SCHEMA", vbCritical, PROC_NAME
+            MsgBox "Missing table: SCHEMA!TBL_SCHEMA", vbOKOnly, PROC_NAME
         End If
         Exit Sub
     End If
@@ -159,16 +159,16 @@ Public Sub Schema_Validate_All(Optional ByVal showUserMessage As Boolean = True)
     issues = issues + ValidateColumnsExist(wb, rules, wsOut, outRow)
 
     ' Summary
-    If showUserMessage Then
+    If showUserMessage And issues > 0 Then
         MsgBox "Schema validation complete. Issues found: " & issues & vbCrLf & _
-               "See the 'Schema_Check' sheet for details.", vbInformation, PROC_NAME
+               "See the 'Schema_Check' sheet for details.", vbOKOnly, PROC_NAME
     End If
 
     Exit Sub
 
 EH:
     If showUserMessage Then
-        MsgBox "Error in " & PROC_NAME & vbCrLf & "Err " & Err.Number & ": " & Err.Description, vbCritical, PROC_NAME
+        MsgBox "Error in " & PROC_NAME & vbCrLf & "Err " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     End If
 End Sub
 
@@ -407,7 +407,7 @@ Private Function HasListColumn(ByVal lo As ListObject, ByVal colName As String) 
     Exit Function
 EH:
     MsgBox "HasListColumn failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Schema Validation"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Schema Validation"
     HasListColumn = False
 End Function
 

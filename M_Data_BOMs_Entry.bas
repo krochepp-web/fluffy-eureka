@@ -46,6 +46,8 @@ Public Sub UI_Create_BOM_For_Assembly( _
 
     On Error GoTo EH
 
+    FocusBomsSheet
+
     If Not GateReady_Safe(False) Then Exit Sub
 
     taId = Trim$(taIdIn)
@@ -711,5 +713,11 @@ End Function
 Private Sub GoToLogSheet()
     On Error Resume Next
     ThisWorkbook.Worksheets("Log").Activate
+    On Error GoTo 0
+End Sub
+
+Private Sub FocusBomsSheet()
+    On Error Resume Next
+    ThisWorkbook.Worksheets("BOMS").Activate
     On Error GoTo 0
 End Sub
