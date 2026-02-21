@@ -87,7 +87,7 @@ Public Function Gate_Ready(Optional ByVal showUserMessage As Boolean = True) As 
     If showUserMessage Then
         If Gate_Ready Then
             If ShouldShowGatePassMessage(wb) Then
-                MsgBox "Workbook Gate: PASS", vbInformation, "Gate"
+                MsgBox "Workbook Gate: PASS", vbOKOnly, "Gate"
             End If
         Else
             MsgBox "Workbook Gate: FAIL" & vbCrLf & _
@@ -96,7 +96,7 @@ Public Function Gate_Ready(Optional ByVal showUserMessage As Boolean = True) As 
                    "Schema issues: " & CStr(schemaIssues) & vbCrLf & _
                    "Data issues: " & CStr(dataIssues) & vbCrLf & _
                    "See '" & SCHEMA_OUTPUT_SHEET & "' and '" & DATA_OUTPUT_SHEET & "'.", _
-                   vbExclamation, "Gate"
+                   vbOKOnly, "Gate"
         End If
     End If
 
@@ -110,7 +110,7 @@ EH:
 
     If showUserMessage Then
         MsgBox "Gate failed." & vbCrLf & _
-               "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Gate"
+               "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Gate"
     End If
 
     Gate_Ready = False
@@ -140,7 +140,7 @@ Private Function RunValidatorProc(ByVal fullyQualifiedProc As String, ByVal show
 EH:
     msg = "Failed to run validator: " & fullyQualifiedProc & " :: " & Err.Description
     MsgBox "Failed to run validator: " & fullyQualifiedProc & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Gate"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Gate"
     RunValidatorProc = False
 End Function
 

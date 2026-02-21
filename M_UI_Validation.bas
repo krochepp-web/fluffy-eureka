@@ -34,12 +34,12 @@ Public Sub UI_Run_GateCheck()
 
     If ok Then
         If M_Core_UX.ShouldShowSuccessMessage("UI_Run_GateCheck") Then
-            MsgBox "Workbook Gate: PASS (ready).", vbInformation, "Gate"
+            MsgBox "Workbook Gate: PASS (ready).", vbOKOnly, "Gate"
         End If
         SafeLog PROC_NAME, 0, "PASS", "Gate returned True."
     Else
         MsgBox "Workbook Gate: FAIL (not ready)." & vbCrLf & _
-               "Review 'Schema_Check' and/or 'Data_Check'.", vbExclamation, "Gate"
+               "Review 'Schema_Check' and/or 'Data_Check'.", vbOKOnly, "Gate"
         SafeLog PROC_NAME, 0, "FAIL", "Gate returned False."
     End If
 
@@ -47,7 +47,7 @@ Public Sub UI_Run_GateCheck()
 
 EH:
     MsgBox "Gate check failed to run." & vbCrLf & _
-           "Err " & Err.Number & ": " & Err.Description, vbExclamation, "Gate"
+           "Err " & Err.Number & ": " & Err.Description, vbOKOnly, "Gate"
     SafeLog PROC_NAME, Err.Number, Err.Description, "UI entry point failure."
 End Sub
 
@@ -62,12 +62,12 @@ Public Sub UI_Run_DataIntegrityCheck()
 
     If ok Then
         If M_Core_UX.ShouldShowSuccessMessage("UI_Run_DataIntegrityCheck") Then
-            MsgBox "Data Integrity: PASS (0 issues).", vbInformation, "Validation"
+            MsgBox "Data Integrity: PASS (0 issues).", vbOKOnly, "Validation"
         End If
         SafeLog PROC_NAME, 0, "PASS", "Data integrity returned True."
     Else
         MsgBox "Data Integrity: FAIL (issues found)." & vbCrLf & _
-               "Review the 'Data_Check' sheet.", vbExclamation, "Validation"
+               "Review the 'Data_Check' sheet.", vbOKOnly, "Validation"
         SafeLog PROC_NAME, 0, "FAIL", "Data integrity returned False."
     End If
 
@@ -75,7 +75,7 @@ Public Sub UI_Run_DataIntegrityCheck()
 
 EH:
     MsgBox "Data integrity failed to run." & vbCrLf & _
-           "Err " & Err.Number & ": " & Err.Description, vbExclamation, "Validation"
+           "Err " & Err.Number & ": " & Err.Description, vbOKOnly, "Validation"
     SafeLog PROC_NAME, Err.Number, Err.Description, "UI entry point failure."
 End Sub
 

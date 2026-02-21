@@ -46,7 +46,7 @@ Public Sub UI_Create_BOM_For_Assembly( _
 
     On Error GoTo EH
 
-    If Not GateReady_Safe(True) Then Exit Sub
+    If Not GateReady_Safe(False) Then Exit Sub
 
     taId = Trim$(taIdIn)
     taPn = Trim$(taPnIn)
@@ -54,14 +54,31 @@ Public Sub UI_Create_BOM_For_Assembly( _
     taDesc = Trim$(taDescIn)
     bomNotes = Trim$(bomNotesIn)
 
-    If Len(taId) = 0 Then taId = PromptText("Enter TAID (unique):", "New BOM")
-    If Len(taPn) = 0 Then taPn = PromptText("Enter top assembly part number (TAPN):", "New BOM")
-    If Len(taRev) = 0 Then taRev = PromptText("Enter top assembly revision (TARev):", "New BOM")
-    If Len(taDesc) = 0 Then taDesc = PromptText("Enter top assembly description (TADesc):", "New BOM")
-    If Len(bomNotes) = 0 Then bomNotes = PromptText("Enter BOM notes (optional):", "New BOM")
+    Dim cancelled As Boolean
+
+    If Len(taId) = 0 Then
+        taId = PromptTextCancelable("Enter TAID (unique):", "New BOM", cancelled)
+        If cancelled Then Exit Sub
+    End If
+    If Len(taPn) = 0 Then
+        taPn = PromptTextCancelable("Enter top assembly part number (TAPN):", "New BOM", cancelled)
+        If cancelled Then Exit Sub
+    End If
+    If Len(taRev) = 0 Then
+        taRev = PromptTextCancelable("Enter top assembly revision (TARev):", "New BOM", cancelled)
+        If cancelled Then Exit Sub
+    End If
+    If Len(taDesc) = 0 Then
+        taDesc = PromptTextCancelable("Enter top assembly description (TADesc):", "New BOM", cancelled)
+        If cancelled Then Exit Sub
+    End If
+    If Len(bomNotes) = 0 Then
+        bomNotes = PromptTextCancelable("Enter BOM notes (optional):", "New BOM", cancelled)
+        If cancelled Then Exit Sub
+    End If
 
     If Len(taId) = 0 Or Len(taPn) = 0 Or Len(taRev) = 0 Or Len(taDesc) = 0 Then
-        MsgBox "BOM creation cancelled. All fields are required.", vbInformation, "New BOM"
+        MsgBox "BOM creation cancelled. All fields are required.", vbOKOnly, "New BOM"
         Exit Sub
     End If
 
@@ -69,8 +86,9 @@ Public Sub UI_Create_BOM_For_Assembly( _
     Exit Sub
 
 EH:
+    GoToLogSheet
     MsgBox "Manual BOM creation failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
 End Sub
 
 Private Sub Create_BOM_For_Assembly_Worker( _
@@ -126,7 +144,7 @@ Public Sub Create_BOM_For_Assembly_FromInputs( _
 
     On Error GoTo EH
 
-If Not GateReady_Safe(True) Then GoTo CleanExit
+If Not GateReady_Safe(False) Then GoTo CleanExit
 
 Set wb = ThisWorkbook
 Set wsTemplate = wb.Worksheets(SH_TEMPLATE)
@@ -162,18 +180,18 @@ taDesc = Trim$(taDesc)
 bomNotes = Trim$(bomNotes)
 
 If Len(taId) = 0 Or Len(taPn) = 0 Or Len(taRev) = 0 Or Len(taDesc) = 0 Then
-MsgBox "All fields are required (TAID, TAPN, TARev, TADesc).", vbExclamation, "New BOM"
+MsgBox "All fields are required (TAID, TAPN, TARev, TADesc).", vbOKOnly, "New BOM"
 GoTo CleanExit
 End If
 
 If TaId_Exists(loBoms, taId) Then
-MsgBox "TAID '" & taId & "' already exists in BOMS (TAID). Choose a unique TAID.", vbExclamation, "New BOM"
+MsgBox "TAID '" & taId & "' already exists in BOMS (TAID). Choose a unique TAID.", vbOKOnly, "New BOM"
 GoTo CleanExit
 End If
 
 If PnRev_Exists_InBoms(loBoms, taPn, taRev) Then
 MsgBox "PN/Revision combination already exists in BOMS." & vbCrLf & _
-               "TAPN=" & taPn & ", TARev=" & taRev, vbExclamation, "New BOM"
+               "TAPN=" & taPn & ", TARev=" & taRev, vbOKOnly, "New BOM"
 GoTo CleanExit
 End If
 
@@ -194,7 +212,7 @@ If foundTop Then
 If ColumnExists(loComps, "RevStatus") Then
 If StrComp(Trim$(topRevStatus), ACTIVE_REVSTATUS, vbTextCompare) <> 0 Then
 MsgBox "Top assembly exists in Comps but RevStatus is not '" & ACTIVE_REVSTATUS & "'." & vbCrLf & _
-                           "TAID=" & taId & ", RevStatus=" & topRevStatus, vbExclamation, "New BOM"
+                           "TAID=" & taId & ", RevStatus=" & topRevStatus, vbOKOnly, "New BOM"
 GoTo CleanExit
 End If
 End If
@@ -213,12 +231,12 @@ Set wsNew = wb.Worksheets(wb.Worksheets.Count)
 newSheetName = BOM_TAB_PREFIX & taId
 If StrComp(NormalizeSheetName(newSheetName), newSheetName, vbBinaryCompare) <> 0 Then
 MsgBox "TAID contains characters that cannot be used in BOM tab names." & vbCrLf & _
-               "TAID=" & taId, vbExclamation, "New BOM"
+               "TAID=" & taId, vbOKOnly, "New BOM"
 GoTo CleanExit
 End If
 If WorksheetExists(wb, newSheetName) Then
 MsgBox "A BOM tab named " & newSheetName & " already exists. TAID must map 1:1 to tab name." & vbCrLf & _
-               "Choose a different TAID.", vbExclamation, "New BOM"
+               "Choose a different TAID.", vbOKOnly, "New BOM"
 GoTo CleanExit
 End If
 wsNew.Name = newSheetName
@@ -261,11 +279,20 @@ If ColumnExists(loBoms, "CreatedBy") Then SetByHeader loBoms, lr, "CreatedBy", c
 If ColumnExists(loBoms, "UpdatedAt") Then SetByHeader loBoms, lr, "UpdatedAt", createdAt
 If ColumnExists(loBoms, "UpdatedBy") Then SetByHeader loBoms, lr, "UpdatedBy", createdBy
 
+If Not M_Core_DataIntegrity.RunDataCheck(False) Then
+    On Error Resume Next
+    lr.Delete
+    wsNew.Delete
+    On Error GoTo EH
+    MsgBox "BOM was rolled back because schema/data integrity requirements failed.", vbOKOnly, "New BOM"
+    GoTo CleanExit
+End If
+
 If showSuccessMessage And M_Core_UX.ShouldShowSuccessMessage("UI_Create_BOM_For_Assembly") Then
     MsgBox "New BOM created: " & bomId & vbCrLf & _
               "Sheet: " & newSheetName & vbCrLf & _
               "TAID: " & taId & vbCrLf & _
-              "PN/Rev: " & taPn & " / " & taRev, vbInformation, "New BOM"
+              "PN/Rev: " & taPn & " / " & taRev, vbOKOnly, "New BOM"
 End If
 
 CleanExit:
@@ -307,9 +334,24 @@ Private Function SafeText(ByVal v As Variant) As String
 End Function
 
 Private Function PromptText(ByVal prompt As String, ByVal title As String) As String
-    Dim response As String
-    response = InputBox(prompt, title)
-    PromptText = Trim$(response)
+    Dim wasCancelled As Boolean
+    PromptText = PromptTextCancelable(prompt, title, wasCancelled)
+End Function
+
+Private Function PromptTextCancelable(ByVal prompt As String, ByVal title As String, ByRef cancelled As Boolean) As String
+    Dim v As Variant
+
+    cancelled = False
+    v = Application.InputBox(prompt, title, Type:=2)
+    If VarType(v) = vbBoolean Then
+        If CBool(v) = False Then
+            cancelled = True
+            PromptTextCancelable = vbNullString
+            Exit Function
+        End If
+    End If
+
+    PromptTextCancelable = Trim$(CStr(v))
 End Function
 
 Private Function SafeSheetNameSafe() As String
@@ -438,7 +480,7 @@ If StrComp(SafeText(ColumnDataItem(arrPn, i)), ourPnIn, vbTextCompare) <> 0 Or _
                StrComp(SafeText(ColumnDataItem(arrRev, i)), ourRevIn, vbTextCompare) <> 0 Then
 MsgBox "TAID exists in Comps but PN/Rev does not match your input." & vbCrLf & _
                        "Comps says: " & SafeText(ColumnDataItem(arrPn, i)) & " / " & SafeText(ColumnDataItem(arrRev, i)) & vbCrLf & _
-                       "You entered: " & ourPnIn & " / " & ourRevIn, vbExclamation, "New BOM"
+                       "You entered: " & ourPnIn & " / " & ourRevIn, vbOKOnly, "New BOM"
 Exit Function
 End If
 
@@ -665,3 +707,9 @@ If Len(u) = 0 Then u = Application.userName
 If Len(Trim$(u)) = 0 Then u = "UNKNOWN"
 GetUserNameSafe = u
 End Function
+
+Private Sub GoToLogSheet()
+    On Error Resume Next
+    ThisWorkbook.Worksheets("Log").Activate
+    On Error GoTo 0
+End Sub

@@ -51,6 +51,8 @@ Public Sub UI_Add_WOS_Build()
 
     On Error GoTo EH
 
+    FocusWosSheet
+
     If Not Gate_Ready(False) Then Exit Sub
 
     assemblyId = Trim$(InputBox("Top assembly part number to build (AssemblyID / TAID):", "New Build"))
@@ -59,7 +61,7 @@ Public Sub UI_Add_WOS_Build()
     dueDateText = Trim$(InputBox("Due date:", "New Build", Format$(Date + 14, "yyyy-mm-dd")))
     If Len(dueDateText) = 0 Then Exit Sub
     If Not IsDate(dueDateText) Then
-        MsgBox "Due date must be a valid date.", vbExclamation, "New Build"
+        MsgBox "Due date must be a valid date.", vbOKOnly, "New Build"
         Exit Sub
     End If
     dueDate = CDate(dueDateText)
@@ -67,14 +69,14 @@ Public Sub UI_Add_WOS_Build()
     buildQtyText = Trim$(InputBox("Build quantity:", "New Build", "1"))
     If Len(buildQtyText) = 0 Then Exit Sub
     If Not IsNumeric(buildQtyText) Then
-        MsgBox "Build quantity must be numeric.", vbExclamation, "New Build"
+        MsgBox "Build quantity must be numeric.", vbOKOnly, "New Build"
         Exit Sub
     End If
     buildQty = CLng(buildQtyText)
 
     destination = Trim$(InputBox("Destination (ShipTo):", "New Build"))
     If Len(destination) = 0 Then
-        MsgBox "Destination is required.", vbExclamation, "New Build"
+        MsgBox "Destination is required.", vbOKOnly, "New Build"
         Exit Sub
     End If
 
@@ -86,7 +88,7 @@ Public Sub UI_Add_WOS_Build()
                         GetSchemaDefaultValue(SH_WOS, TBL_WOS, "DockDate"))
     If Len(dockDateText) = 0 Then Exit Sub
     If Not IsDate(dockDateText) Then
-        MsgBox "Dock date must be a valid date.", vbExclamation, "New Build"
+        MsgBox "Dock date must be a valid date.", vbOKOnly, "New Build"
         Exit Sub
     End If
     dockDate = CDate(dockDateText)
@@ -95,12 +97,12 @@ Public Sub UI_Add_WOS_Build()
                           GetSchemaDefaultValue(SH_WOS, TBL_WOS, "TransitTime"))
     If Len(transitTimeText) = 0 Then Exit Sub
     If Not IsNumeric(transitTimeText) Then
-        MsgBox "Transit time must be numeric.", vbExclamation, "New Build"
+        MsgBox "Transit time must be numeric.", vbOKOnly, "New Build"
         Exit Sub
     End If
     transitTime = CLng(transitTimeText)
     If transitTime < 0 Then
-        MsgBox "Transit time cannot be negative.", vbExclamation, "New Build"
+        MsgBox "Transit time cannot be negative.", vbOKOnly, "New Build"
         Exit Sub
     End If
 
@@ -109,6 +111,7 @@ Public Sub UI_Add_WOS_Build()
 
 EH:
     M_Core_Logging.LogError PROC_NAME, "UI add build failed", Err.Description, Err.Number
+    GoToLogSheet
     M_Core_UX.ShowFailureMessageWithLogFocus PROC_NAME, "New Build", "New build failed.", Err.Description, Err.Number
 End Sub
 
@@ -128,6 +131,8 @@ Public Sub Add_WOS_Build_FromInputs(ByVal assemblyId As String, ByVal dueDate As
     Dim actor As String
 
     On Error GoTo EH
+
+    FocusWosSheet
 
     If Not Gate_Ready(False) Then Exit Sub
 
@@ -183,6 +188,11 @@ Public Sub Add_WOS_Build_FromInputs(ByVal assemblyId As String, ByVal dueDate As
     actor = SafeActorName()
     StampAuditIfPresent loWos, lr, actor, nowStamp
 
+    If Not M_Core_DataIntegrity.RunDataCheck(False) Then
+        If Not lr Is Nothing Then lr.Delete
+        Err.Raise vbObjectError + 7006, PROC_NAME, "Schema/data integrity requirements failed after build creation."
+    End If
+
     M_Core_Logging.LogInfo PROC_NAME, "Created WOS build", _
         "BuildID=" & buildId & "; AssemblyID=" & assemblyId & "; Qty=" & CStr(buildQty) & _
         "; DeliveryMethod=" & deliveryMethod & "; DockDate=" & IIf(IsMissing(dockDate), "", CStr(dockDate)) & _
@@ -190,12 +200,13 @@ Public Sub Add_WOS_Build_FromInputs(ByVal assemblyId As String, ByVal dueDate As
 
     If M_Core_UX.ShouldShowSuccessMessage("Add_WOS_Build_FromInputs") Then
         MsgBox "Build created successfully." & vbCrLf & _
-               "BuildID: " & buildId, vbInformation, "New Build"
+               "BuildID: " & buildId, vbOKOnly, "New Build"
     End If
     Exit Sub
 
 EH:
     M_Core_Logging.LogError PROC_NAME, "Create WOS build failed", Err.Description, Err.Number
+    GoToLogSheet
     M_Core_UX.ShowFailureMessageWithLogFocus PROC_NAME, "New Build", "Create build failed.", Err.Description, Err.Number
 End Sub
 
@@ -276,7 +287,7 @@ Public Function Update_WOS_Build_Controlled(ByVal buildId As String, _
 EH:
     M_Core_Logging.LogError PROC_NAME, "Controlled update failed", Err.Description, Err.Number
     MsgBox "Build update blocked." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Edit Build"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Edit Build"
     Update_WOS_Build_Controlled = False
 End Function
 
@@ -504,3 +515,15 @@ Private Function SafeCellText(ByVal v As Variant) As String
     If IsNull(v) Then Exit Function
     SafeCellText = Trim$(CStr(v))
 End Function
+
+Private Sub FocusWosSheet()
+    On Error Resume Next
+    ThisWorkbook.Worksheets(SH_WOS).Activate
+    On Error GoTo 0
+End Sub
+
+Private Sub GoToLogSheet()
+    On Error Resume Next
+    ThisWorkbook.Worksheets("Log").Activate
+    On Error GoTo 0
+End Sub
