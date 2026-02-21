@@ -78,8 +78,7 @@ Public Sub UI_Add_WOS_Build()
 
 EH:
     M_Core_Logging.LogError PROC_NAME, "UI add build failed", Err.Description, Err.Number
-    MsgBox "New build failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Build"
+    M_Core_UX.ShowFailureMessageWithLogFocus PROC_NAME, "New Build", "New build failed.", Err.Description, Err.Number
 End Sub
 
 Public Sub Add_WOS_Build_FromInputs(ByVal assemblyId As String, ByVal dueDate As Date, ByVal buildQty As Long, ByVal destination As String, _
@@ -150,14 +149,15 @@ Public Sub Add_WOS_Build_FromInputs(ByVal assemblyId As String, ByVal dueDate As
     M_Core_Logging.LogInfo PROC_NAME, "Created WOS build", _
         "BuildID=" & buildId & "; AssemblyID=" & assemblyId & "; Qty=" & CStr(buildQty) & "; DueCol=" & dueDateCol & "; Version=" & MODULE_VERSION
 
-    MsgBox "Build created successfully." & vbCrLf & _
-           "BuildID: " & buildId, vbInformation, "New Build"
+    If M_Core_UX.ShouldShowSuccessMessage("Add_WOS_Build_FromInputs") Then
+        MsgBox "Build created successfully." & vbCrLf & _
+               "BuildID: " & buildId, vbInformation, "New Build"
+    End If
     Exit Sub
 
 EH:
     M_Core_Logging.LogError PROC_NAME, "Create WOS build failed", Err.Description, Err.Number
-    MsgBox "Create build failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Build"
+    M_Core_UX.ShowFailureMessageWithLogFocus PROC_NAME, "New Build", "Create build failed.", Err.Description, Err.Number
 End Sub
 
 Public Function Update_WOS_Build_Controlled(ByVal buildId As String, _
