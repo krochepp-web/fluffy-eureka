@@ -13,10 +13,11 @@ Deprecated compatibility macro (do not map to buttons/automation):
 
 Run these in order before first use (or after schema changes):
 
-1. `UI_Run_GateCheck`
-2. `UI_Run_HealthCheck`
-3. `UI_Run_AllChecks`
-4. `UI_RefreshAutomationRegistry`
+1. `RunGateCheck`
+2. `RunDiagnostics`
+3. `UI_RefreshAutomationRegistry`
+
+Compatibility UI wrappers remain available (`UI_Run_GateCheck`, `UI_Run_HealthCheck`, `UI_Run_AllChecks`) but now route to the canonical check semantics.
 
 Why: these checks confirm core schema/platform readiness and refresh registry metadata before user-facing operations.
 
@@ -125,13 +126,12 @@ Avoid mapping legacy compatibility macro:
 
 Run these after changing picker logic:
 
-1. `UI_Run_GateCheck`
-2. `UI_Run_HealthCheck`
-3. `UI_Run_AllChecks`
-4. `UI_Run_Comps_Tests`
-5. `UI_Open_ComponentPicker`
-6. `UI_Refresh_PickerResults`
-7. One end-to-end add test for each context:
+1. `RunGateCheck`
+2. `RunDiagnostics`
+3. `UI_Run_Comps_Tests`
+4. `UI_Open_ComponentPicker`
+5. `UI_Refresh_PickerResults`
+6. One end-to-end add test for each context:
    - `UI_Add_SelectedPickerRows_To_ActiveBOM`
    - `UI_Add_SelectedPickerRows_To_POLines`
    - `UI_Add_SelectedPickerRows_To_Inventory`
