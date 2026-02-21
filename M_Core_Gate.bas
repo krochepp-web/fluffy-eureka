@@ -178,9 +178,9 @@ End Function
 
 
 Private Function ShouldShowGatePassMessage(ByVal wb As Workbook) As Boolean
-    ' Silent-on-success by default. If Landing has DEV MODE? = TRUE,
-    ' show pass message to support verbose diagnostic workflows.
-    ShouldShowGatePassMessage = LandingFlagValue(wb, "DEV MODE?", False)
+    ' Silent-on-success enforced to avoid popup noise in normal workflows.
+    ' Keep wb parameter for signature compatibility.
+    ShouldShowGatePassMessage = False
 End Function
 
 Private Function LandingFlagValue(ByVal wb As Workbook, ByVal headerName As String, ByVal defaultValue As Boolean) As Boolean
