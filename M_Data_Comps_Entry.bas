@@ -280,9 +280,11 @@ Private Sub RunNewComponent()
     SetByHeader loComps, lr, "IsBuildable", buildable
 
     createdOk = True
-    MsgBox "Component created: " & compId & vbCrLf & _
-           "Supplier: " & pickName & " [" & pickId & "]" & vbCrLf & _
-           "IsBuildable: " & IIf(buildable, "TRUE", "FALSE"), vbInformation, "New Component"
+    If M_Core_UX.ShouldShowSuccessMessage("RunNewComponent") Then
+        MsgBox "Component created: " & compId & vbCrLf & _
+               "Supplier: " & pickName & " [" & pickId & "]" & vbCrLf & _
+               "IsBuildable: " & IIf(buildable, "TRUE", "FALSE"), vbInformation, "New Component"
+    End If
     Exit Sub
 
 FailRollback:

@@ -34,7 +34,7 @@ Public Sub UI_Recalc_Demand_From_WOS_BOM()
     On Error GoTo EH
 
     If Not M_Core_Gate.Gate_Ready(True) Then Exit Sub
-    Recalc_Demand_From_WOS_BOM True
+    Recalc_Demand_From_WOS_BOM M_Core_UX.ShouldShowSuccessMessage("UI_Recalc_Demand_From_WOS_BOM")
     Exit Sub
 
 EH:

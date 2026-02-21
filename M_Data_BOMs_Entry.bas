@@ -65,7 +65,7 @@ Public Sub UI_Create_BOM_For_Assembly( _
         Exit Sub
     End If
 
-    Create_BOM_For_Assembly_FromInputs taId, taPn, taRev, taDesc, bomNotes
+    Create_BOM_For_Assembly_Worker taId, taPn, taRev, taDesc, bomNotes, True
     Exit Sub
 
 EH:
@@ -73,12 +73,23 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
 End Sub
 
+Private Sub Create_BOM_For_Assembly_Worker( _
+    ByVal taId As String, _
+    ByVal taPn As String, _
+    ByVal taRev As String, _
+    ByVal taDesc As String, _
+    Optional ByVal bomNotes As String = "", _
+    Optional ByVal showSuccessMessage As Boolean = False)
+    Create_BOM_For_Assembly_FromInputs taId, taPn, taRev, taDesc, bomNotes, showSuccessMessage
+End Sub
+
 Public Sub Create_BOM_For_Assembly_FromInputs( _
     ByVal taId As String, _
     ByVal taPn As String, _
     ByVal taRev As String, _
     ByVal taDesc As String, _
-    Optional ByVal bomNotes As String = "")
+    Optional ByVal bomNotes As String = "", _
+    Optional ByVal showSuccessMessage As Boolean = False)
     Const PROC_NAME As String = "M_Data_BOMs_Entry.Create_BOM_For_Assembly_FromInputs"
 
     Const SH_TEMPLATE As String = "BOM_TEMPLATE"
@@ -250,10 +261,12 @@ If ColumnExists(loBoms, "CreatedBy") Then SetByHeader loBoms, lr, "CreatedBy", c
 If ColumnExists(loBoms, "UpdatedAt") Then SetByHeader loBoms, lr, "UpdatedAt", createdAt
 If ColumnExists(loBoms, "UpdatedBy") Then SetByHeader loBoms, lr, "UpdatedBy", createdBy
 
-MsgBox "New BOM created: " & bomId & vbCrLf & _
-          "Sheet: " & newSheetName & vbCrLf & _
-          "TAID: " & taId & vbCrLf & _
-          "PN/Rev: " & taPn & " / " & taRev, vbInformation, "New BOM"
+If showSuccessMessage And M_Core_UX.ShouldShowSuccessMessage("UI_Create_BOM_For_Assembly") Then
+    MsgBox "New BOM created: " & bomId & vbCrLf & _
+              "Sheet: " & newSheetName & vbCrLf & _
+              "TAID: " & taId & vbCrLf & _
+              "PN/Rev: " & taPn & " / " & taRev, vbInformation, "New BOM"
+End If
 
 CleanExit:
 Exit Sub

@@ -352,7 +352,9 @@ Private Sub UI_Add_SelectedPickerRows_ToContext(ByVal targetContext As PickerTar
 
     AddPickedRowsToTarget wb, loPick, rowIndices, targetContext, qtyDefault, promptPerRowQty
 
-    MsgBox "Selected components processed for " & ContextLabel(targetContext) & ".", vbInformation, "Component Picker"
+    If M_Core_UX.ShouldShowSuccessMessage("BOM_Picker_Add_Flows") Then
+        MsgBox "Selected components processed for " & ContextLabel(targetContext) & ".", vbInformation, "Component Picker"
+    End If
     Exit Sub
 
 EH:
