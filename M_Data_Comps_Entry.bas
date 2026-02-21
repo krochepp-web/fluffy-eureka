@@ -57,10 +57,16 @@ Option Explicit
 ' PUBLIC ENTRY POINTS
 '==========================
 Public Sub NewComponent()
-    RunNewComponent
+    Dim ignoredCompId As String
+    Dim ignoredFailureReason As String
+    Call RunNewComponent(ignoredCompId, ignoredFailureReason)
 End Sub
 
-Private Sub RunNewComponent()
+Public Function NewComponent_Create(ByRef attemptedCompId As String, ByRef failureReason As String) As Boolean
+    NewComponent_Create = RunNewComponent(attemptedCompId, failureReason)
+End Function
+
+Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureReason As String) As Boolean
     Const PROC_NAME As String = "M_Data_Comps_Entry.RunNewComponent"
 
     Const SH_COMPS As String = "Comps"
@@ -101,13 +107,16 @@ Private Sub RunNewComponent()
 
     createdOk = False
     abortedReason = vbNullString
+    attemptedCompId = vbNullString
+    failureReason = vbNullString
+    RunNewComponent = False
 
     On Error GoTo EH
 
     '-----------------------------
     ' Gate check (consistency)
     '-----------------------------
-    If Not GateReady_Safe(True) Then
+    If Not GateReady_Safe(False) Then
         abortedReason = "Gate not ready."
         GoTo Aborted
     End If
@@ -154,6 +163,7 @@ Private Sub RunNewComponent()
     ' Generate CompID
     compId = GenerateNextId(loComps, "CompID", COMP_ID_PREFIX, COMP_ID_PAD)
     If Len(compId) = 0 Then Err.Raise vbObjectError + 5100, PROC_NAME, "Failed to generate CompID."
+    attemptedCompId = compId
     If ValueExistsInColumn(loComps, "CompID", compId) Then Err.Raise vbObjectError + 5101, PROC_NAME, "Generated CompID already exists: " & compId
 
     ' Create row now; rollback on cancel/error
@@ -186,7 +196,7 @@ Private Sub RunNewComponent()
         MsgBox "OurPN + OurRev must be unique." & vbCrLf & _
                "That combination already exists:" & vbCrLf & _
                "OurPN=" & ourPN & vbCrLf & _
-               "OurRev=" & ourRev, vbExclamation, "New Component"
+               "OurRev=" & ourRev, vbOKOnly, "New Component"
         abortedReason = "Duplicate OurPN+OurRev."
         GoTo FailRollback
     End If
@@ -279,13 +289,19 @@ Private Sub RunNewComponent()
 
     SetByHeader loComps, lr, "IsBuildable", buildable
 
+    If Not M_Core_DataIntegrity.RunDataCheck(False) Then
+        abortedReason = "Schema/data integrity requirements failed after component entry."
+        GoTo FailRollback
+    End If
+
     createdOk = True
+    RunNewComponent = True
     If M_Core_UX.ShouldShowSuccessMessage("RunNewComponent") Then
         MsgBox "Component created: " & compId & vbCrLf & _
                "Supplier: " & pickName & " [" & pickId & "]" & vbCrLf & _
-               "IsBuildable: " & IIf(buildable, "TRUE", "FALSE"), vbInformation, "New Component"
+               "IsBuildable: " & IIf(buildable, "TRUE", "FALSE"), vbOKOnly, "New Component"
     End If
-    Exit Sub
+    Exit Function
 
 FailRollback:
     On Error Resume Next
@@ -295,21 +311,26 @@ FailRollback:
 
 Aborted:
     If Not createdOk Then
+        failureReason = Trim$(abortedReason)
+        If Len(failureReason) = 0 Then failureReason = "Creation cancelled before save."
+
         If Len(Trim$(abortedReason)) > 0 Then
-            MsgBox "No new component created." & vbCrLf & "Reason: " & abortedReason, vbInformation, "New Component"
+            MsgBox "No new component created." & vbCrLf & "Reason: " & abortedReason, vbOKOnly, "New Component"
         Else
-            MsgBox "No new component created.", vbInformation, "New Component"
+            MsgBox "No new component created.", vbOKOnly, "New Component"
         End If
     End If
-    Exit Sub
+    Exit Function
 
 EH:
     On Error Resume Next
     If Not lr Is Nothing Then lr.Delete
     On Error GoTo 0
+    failureReason = "Error " & CStr(Err.Number) & ": " & Err.Description
+    GoToLogSheet
     MsgBox "No new component created." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Component"
-End Sub
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "New Component"
+End Function
 
 '==========================
 ' Schema DefaultValue lookup (TBL_SCHEMA)
@@ -370,8 +391,9 @@ Private Function GateReady_Safe(Optional ByVal showUserMessage As Boolean = True
     GateReady_Safe = M_Core_Gate.Gate_Ready(showUserMessage)
     Exit Function
 EH:
+    GoToLogSheet
     MsgBox "GateReady_Safe failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Component"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "New Component"
     GateReady_Safe = False
 End Function
 
@@ -389,7 +411,7 @@ Retry:
         ans = MsgBox("This field is required." & vbCrLf & vbCrLf & _
                      "Yes = Try again" & vbCrLf & _
                      "No  = Cancel creation (rollback)", _
-                     vbYesNo + vbExclamation, title)
+                     vbYesNo, title)
         If ans = vbYes Then GoTo Retry
         Prompt_RequiredText = vbNullString
         Exit Function
@@ -464,7 +486,7 @@ Retry:
                 Exit Function
             End If
         End If
-        MsgBox "Invalid selection number. Try again.", vbExclamation, title
+        MsgBox "Invalid selection number. Try again.", vbOKOnly, title
         GoTo Retry
     End If
 
@@ -475,7 +497,7 @@ Retry:
         End If
     Next i
 
-    MsgBox "Value not found in '" & namedRange & "'. Please select from the list.", vbExclamation, title
+    MsgBox "Value not found in '" & namedRange & "'. Please select from the list.", vbOKOnly, title
     GoTo Retry
 End Function
 
@@ -492,18 +514,18 @@ Retry:
     End If
 
     If Not IsNumeric(resp) Then
-        MsgBox "Please enter a whole number.", vbExclamation, title
+        MsgBox "Please enter a whole number.", vbOKOnly, title
         GoTo Retry
     End If
 
     v = CDbl(resp)
     If v <> Fix(v) Then
-        MsgBox "Please enter a whole number (no decimals).", vbExclamation, title
+        MsgBox "Please enter a whole number (no decimals).", vbOKOnly, title
         GoTo Retry
     End If
 
     If v < minValue Or v > maxValue Then
-        MsgBox "Value out of range. Must be between " & CStr(minValue) & " and " & CStr(maxValue) & ".", vbExclamation, title
+        MsgBox "Value out of range. Must be between " & CStr(minValue) & " and " & CStr(maxValue) & ".", vbOKOnly, title
         GoTo Retry
     End If
 
@@ -523,13 +545,13 @@ Retry:
     End If
 
     If Not IsNumeric(resp) Then
-        MsgBox "Please enter a number.", vbExclamation, title
+        MsgBox "Please enter a number.", vbOKOnly, title
         GoTo Retry
     End If
 
     v = CDbl(resp)
     If v < minValue Or v > maxValue Then
-        MsgBox "Value out of range. Must be between " & CStr(minValue) & " and " & CStr(maxValue) & ".", vbExclamation, title
+        MsgBox "Value out of range. Must be between " & CStr(minValue) & " and " & CStr(maxValue) & ".", vbOKOnly, title
         GoTo Retry
     End If
 
@@ -544,7 +566,7 @@ Private Sub RequireNamedRange(ByVal namedRange As String)
     Exit Sub
 EH:
     MsgBox "RequireNamedRange failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Component"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "New Component"
     Err.Raise vbObjectError + 5801, "RequireNamedRange", "Named range not found: " & namedRange
 End Sub
 
@@ -634,12 +656,12 @@ Private Function SupplierPick_ByName(ByVal loSupp As ListObject, ByRef supplierI
     supplierDefaultLT = vbNullString
 
     If loSupp Is Nothing Then
-        MsgBox "Suppliers table reference is Nothing.", vbExclamation, title
+        MsgBox "Suppliers table reference is Nothing.", vbOKOnly, title
         Exit Function
     End If
 
     If loSupp.DataBodyRange Is Nothing Then
-        MsgBox "Suppliers table '" & loSupp.Name & "' has no rows.", vbExclamation, title
+        MsgBox "Suppliers table '" & loSupp.Name & "' has no rows.", vbOKOnly, title
         Exit Function
     End If
 
@@ -649,7 +671,7 @@ Private Function SupplierPick_ByName(ByVal loSupp As ListObject, ByRef supplierI
 
     If idxId = 0 Or idxName = 0 Or idxLT = 0 Then
         MsgBox "Supplier picker cannot run because required headers were not found." & vbCrLf & _
-               "Expected: SupplierID, SupplierName, SupplierDefaultLT", vbExclamation, title
+               "Expected: SupplierID, SupplierName, SupplierDefaultLT", vbOKOnly, title
         Exit Function
     End If
 
@@ -700,7 +722,7 @@ RetrySearch:
             msg = msg & "  - " & CStr(arrName(i, 1)) & vbCrLf
         Next i
 
-        MsgBox msg, vbExclamation, title
+        MsgBox msg, vbOKOnly, title
         GoTo RetrySearch
     End If
 
@@ -738,13 +760,13 @@ RetryPick:
     If Len(choiceText) = 0 Then GoTo RetrySearch
 
     If Not IsNumeric(choiceText) Then
-        MsgBox "Please enter a valid number from the list.", vbExclamation, title
+        MsgBox "Please enter a valid number from the list.", vbOKOnly, title
         GoTo RetryPick
     End If
 
     choiceN = CLng(choiceText)
     If choiceN < 1 Or choiceN > hitCount Then
-        MsgBox "Choice out of range. Pick a number shown in the list.", vbExclamation, title
+        MsgBox "Choice out of range. Pick a number shown in the list.", vbOKOnly, title
         GoTo RetryPick
     End If
 
@@ -963,8 +985,14 @@ EH:
     ' Fail "soft" (sorting should not block record creation)
     ' If you prefer to log, replace with M_Core_Logging.LogEvent(...) here.
     MsgBox "SortTable_ByColumn failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub
 
 
+
+Private Sub GoToLogSheet()
+    On Error Resume Next
+    ThisWorkbook.Worksheets("Log").Activate
+    On Error GoTo 0
+End Sub
