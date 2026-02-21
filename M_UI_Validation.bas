@@ -30,10 +30,12 @@ Public Sub UI_Run_GateCheck()
     Dim ok As Boolean
     On Error GoTo EH
 
-    ok = M_Core_Gate.RunGateCheck(True)
+    ok = M_Core_Gate.RunGateCheck(False)
 
     If ok Then
-        MsgBox "Workbook Gate: PASS (ready).", vbInformation, "Gate"
+        If M_Core_UX.ShouldShowSuccessMessage("UI_Run_GateCheck") Then
+            MsgBox "Workbook Gate: PASS (ready).", vbInformation, "Gate"
+        End If
         SafeLog PROC_NAME, 0, "PASS", "Gate returned True."
     Else
         MsgBox "Workbook Gate: FAIL (not ready)." & vbCrLf & _
@@ -56,10 +58,12 @@ Public Sub UI_Run_DataIntegrityCheck()
     Dim ok As Boolean
     On Error GoTo EH
 
-    ok = M_Core_DataIntegrity.Validate_DataIntegrity_All(True)
+    ok = M_Core_DataIntegrity.Validate_DataIntegrity_All(False)
 
     If ok Then
-        MsgBox "Data Integrity: PASS (0 issues).", vbInformation, "Validation"
+        If M_Core_UX.ShouldShowSuccessMessage("UI_Run_DataIntegrityCheck") Then
+            MsgBox "Data Integrity: PASS (0 issues).", vbInformation, "Validation"
+        End If
         SafeLog PROC_NAME, 0, "PASS", "Data integrity returned True."
     Else
         MsgBox "Data Integrity: FAIL (issues found)." & vbCrLf & _
