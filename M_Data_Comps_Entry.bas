@@ -57,10 +57,16 @@ Option Explicit
 ' PUBLIC ENTRY POINTS
 '==========================
 Public Sub NewComponent()
-    RunNewComponent
+    Dim ignoredCompId As String
+    Dim ignoredFailureReason As String
+    Call RunNewComponent(ignoredCompId, ignoredFailureReason)
 End Sub
 
-Private Sub RunNewComponent()
+Public Function NewComponent_Create(ByRef attemptedCompId As String, ByRef failureReason As String) As Boolean
+    NewComponent_Create = RunNewComponent(attemptedCompId, failureReason)
+End Function
+
+Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureReason As String) As Boolean
     Const PROC_NAME As String = "M_Data_Comps_Entry.RunNewComponent"
 
     Const SH_COMPS As String = "Comps"
@@ -101,13 +107,16 @@ Private Sub RunNewComponent()
 
     createdOk = False
     abortedReason = vbNullString
+    attemptedCompId = vbNullString
+    failureReason = vbNullString
+    RunNewComponent = False
 
     On Error GoTo EH
 
     '-----------------------------
     ' Gate check (consistency)
     '-----------------------------
-    If Not GateReady_Safe(True) Then
+    If Not GateReady_Safe(False) Then
         abortedReason = "Gate not ready."
         GoTo Aborted
     End If
@@ -154,6 +163,7 @@ Private Sub RunNewComponent()
     ' Generate CompID
     compId = GenerateNextId(loComps, "CompID", COMP_ID_PREFIX, COMP_ID_PAD)
     If Len(compId) = 0 Then Err.Raise vbObjectError + 5100, PROC_NAME, "Failed to generate CompID."
+    attemptedCompId = compId
     If ValueExistsInColumn(loComps, "CompID", compId) Then Err.Raise vbObjectError + 5101, PROC_NAME, "Generated CompID already exists: " & compId
 
     ' Create row now; rollback on cancel/error
@@ -280,12 +290,13 @@ Private Sub RunNewComponent()
     SetByHeader loComps, lr, "IsBuildable", buildable
 
     createdOk = True
+    RunNewComponent = True
     If M_Core_UX.ShouldShowSuccessMessage("RunNewComponent") Then
         MsgBox "Component created: " & compId & vbCrLf & _
                "Supplier: " & pickName & " [" & pickId & "]" & vbCrLf & _
                "IsBuildable: " & IIf(buildable, "TRUE", "FALSE"), vbInformation, "New Component"
     End If
-    Exit Sub
+    Exit Function
 
 FailRollback:
     On Error Resume Next
@@ -295,21 +306,25 @@ FailRollback:
 
 Aborted:
     If Not createdOk Then
+        failureReason = Trim$(abortedReason)
+        If Len(failureReason) = 0 Then failureReason = "Creation cancelled before save."
+
         If Len(Trim$(abortedReason)) > 0 Then
             MsgBox "No new component created." & vbCrLf & "Reason: " & abortedReason, vbInformation, "New Component"
         Else
             MsgBox "No new component created.", vbInformation, "New Component"
         End If
     End If
-    Exit Sub
+    Exit Function
 
 EH:
     On Error Resume Next
     If Not lr Is Nothing Then lr.Delete
     On Error GoTo 0
+    failureReason = "Error " & CStr(Err.Number) & ": " & Err.Description
     MsgBox "No new component created." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Component"
-End Sub
+End Function
 
 '==========================
 ' Schema DefaultValue lookup (TBL_SCHEMA)

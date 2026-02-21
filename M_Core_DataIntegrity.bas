@@ -37,6 +37,16 @@ Option Explicit
 ' Date: 2025-12-21
 '===========================================================
 
+Public Function RunDataCheck(Optional ByVal showUserMessage As Boolean = True) As Boolean
+    Data_Check showUserMessage
+    RunDataCheck = (CountDataIssues() = 0)
+End Function
+
+' Canonical data checker entry point.
+Public Sub Data_Check(Optional ByVal showUserMessage As Boolean = True)
+    Call Validate_DataIntegrity_All(showUserMessage)
+End Sub
+
 Public Function Validate_DataIntegrity_All(Optional ByVal showUserMessage As Boolean = True) As Boolean
     Const PROC_NAME As String = "Validate_DataIntegrity_All"
 
@@ -96,6 +106,25 @@ EH:
     MsgBox "Data Integrity validation failed." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Validate_DataIntegrity_All"
     Validate_DataIntegrity_All = False
+End Function
+
+Private Function CountDataIssues() As Long
+    Dim ws As Worksheet
+    Dim lastRow As Long
+
+    On Error GoTo CleanFail
+    Set ws = ThisWorkbook.Worksheets("Data_Check")
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).row
+
+    If lastRow < 2 Then
+        CountDataIssues = 0
+    Else
+        CountDataIssues = Application.WorksheetFunction.CountA(ws.Range("A2:A" & CStr(lastRow)))
+    End If
+    Exit Function
+
+CleanFail:
+    CountDataIssues = 999999
 End Function
 
 Private Function Validate_AllTables_FromSchema(ByVal wb As Workbook, ByVal loSchema As ListObject, ByVal wsOut As Worksheet, ByRef outRow As Long) As Long
