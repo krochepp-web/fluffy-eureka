@@ -17,8 +17,8 @@ Option Explicit
 '
 ' Inputs (Tabs/Tables/Headers):
 '   - Optional validator entry points (if implemented):
-'       M_Core_Schema.Schema_Validate_All
-'       M_Core_DataIntegrity.Validate_DataIntegrity_All
+'       M_Core_Schema.Schema_Check
+'       M_Core_DataIntegrity.Data_Check
 '   - Expected output sheets produced by validators:
 '       "Schema_Check" (row 1 headers; row 2+ issues)
 '       "Data_Check"   (row 1 headers; row 2+ issues)
@@ -37,9 +37,15 @@ Option Explicit
 ' Date: 2025-12-20 / updated 2025-12-20
 '===============================================================================
 
-' UI wrapper: shows in Alt+F8 (no parameters allowed in Macro dialog)
+' Deprecated UI wrapper retained for compatibility.
 Public Sub UI_Run_HealthCheck()
-    HealthCheck_RunAll True
+    RunDiagnostics True
+End Sub
+
+' Canonical optional comprehensive diagnostics runner.
+' Includes schema/data execution and summary reporting.
+Public Sub RunDiagnostics(Optional ByVal showUserMessage As Boolean = True)
+    HealthCheck_RunAll showUserMessage
 End Sub
 
 Private Sub HealthCheck_RunAll(Optional ByVal showUserMessage As Boolean = True)
@@ -59,17 +65,17 @@ Private Sub HealthCheck_RunAll(Optional ByVal showUserMessage As Boolean = True)
     On Error GoTo EH
 
     ' 1) Run Schema validator (if present)
-    ranSchema = CallOptionalMacro("M_Core_Schema.Schema_Validate_All")
+    ranSchema = CallOptionalMacro("M_Core_Schema.Schema_Check")
     schemaIssues = CountIssuesOnSheet("Schema_Check")
     schemaOk = (schemaIssues = 0) And ranSchema
 
     ' 2) Run Data integrity validator (if present)
-    ranData = CallOptionalMacro("M_Core_DataIntegrity.Validate_DataIntegrity_All")
+    ranData = CallOptionalMacro("M_Core_DataIntegrity.Data_Check")
     dataIssues = CountIssuesOnSheet("Data_Check")
     dataOk = (dataIssues = 0) And ranData
 
     ' 3) Optional Gate check (if present)
-    ranGate = CallOptionalMacroWithReturn("Gate_Ready", CBool(showUserMessage), gateOk)
+    ranGate = CallOptionalMacroWithReturn("M_Core_Gate.RunGateCheck", CBool(showUserMessage), gateOk)
 
     ' Summary
     msg = "Workbook Health Check" & vbCrLf & String(22, "-") & vbCrLf & _
@@ -79,9 +85,9 @@ Private Sub HealthCheck_RunAll(Optional ByVal showUserMessage As Boolean = True)
           "Data issues found:    " & CStr(dataIssues) & vbCrLf & vbCrLf
 
     If ranGate Then
-        msg = msg & "Gate_Ready returned: " & VariantToText(gateOk) & vbCrLf & vbCrLf
+        msg = msg & "RunGateCheck returned: " & VariantToText(gateOk) & vbCrLf & vbCrLf
     Else
-        msg = msg & "Gate_Ready: (not found / not run)" & vbCrLf & vbCrLf
+        msg = msg & "RunGateCheck: (not found / not run)" & vbCrLf & vbCrLf
     End If
 
     msg = msg & "Overall status: " & IIf(schemaOk And dataOk, "PASS (safe to proceed)", "FAIL (fix issues before proceeding)")
@@ -92,7 +98,7 @@ Private Sub HealthCheck_RunAll(Optional ByVal showUserMessage As Boolean = True)
            "; GateRan=" & BoolToYesNo(ranGate) & "; Gate=" & VariantToText(gateOk)
 
     If showUserMessage Then
-        MsgBox msg, IIf(schemaOk And dataOk, vbInformation, vbExclamation), "Health Check"
+        MsgBox msg, IIf(schemaOk And dataOk, vbOKOnly, vbOKOnly), "Health Check"
     End If
 
 CleanExit:
@@ -102,7 +108,7 @@ EH:
     TryLog PROC_NAME, Err.Number, Err.Description, "Unhandled error in health check."
     If showUserMessage Then
         MsgBox "HealthCheck_RunAll failed." & vbCrLf & _
-               "Error " & Err.Number & ": " & Err.Description, vbCritical, "Health Check"
+               "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Health Check"
     End If
     Resume CleanExit
 End Sub

@@ -177,10 +177,10 @@ EH:
             "2) Table exists: " & TBL_LOG & vbCrLf & _
             "3) Sheet/Table not protected or locked" & vbCrLf & _
             "4) Log table columns match constants in M_Core_Constants", _
-            vbExclamation, "Log Diagnostics"
+            vbOKOnly, "Log Diagnostics"
     End If
     MsgBox "Logging error." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Logging"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Logging"
     Resume CleanExit
 End Sub
 

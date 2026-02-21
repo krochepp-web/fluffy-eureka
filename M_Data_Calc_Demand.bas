@@ -40,7 +40,7 @@ Public Sub UI_Recalc_Demand_From_WOS_BOM()
 EH:
     M_Core_Logging.LogError PROC_NAME, "UI demand recalc failed", Err.Description, Err.Number
     MsgBox "Demand recalculation failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Demand"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Demand"
 End Sub
 
 Public Sub Recalc_Demand_From_WOS_BOM(Optional ByVal showUserMessage As Boolean = True)
@@ -85,7 +85,7 @@ Public Sub Recalc_Demand_From_WOS_BOM(Optional ByVal showUserMessage As Boolean 
 
     If showUserMessage Then
         MsgBox "Demand recalculated successfully." & vbCrLf & _
-               "Demand rows: " & CStr(dictDemand.Count), vbInformation, "Demand"
+               "Demand rows: " & CStr(dictDemand.Count), vbOKOnly, "Demand"
     End If
 
     Exit Sub
@@ -94,7 +94,7 @@ EH:
     M_Core_Logging.LogError PROC_NAME, "Demand recalculation failed", Err.Description, Err.Number
     If showUserMessage Then
         MsgBox "Demand recalculation failed." & vbCrLf & _
-               "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Demand"
+               "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Demand"
     End If
 End Sub
 
@@ -109,8 +109,8 @@ Private Sub BuildBomLookup(ByVal loBoms As ListObject, ByVal dictBomTabByTaid As
 
     If loBoms.DataBodyRange Is Nothing Then Exit Sub
 
-    arrTaid = loBoms.ListColumns(idxTaid).DataBodyRange.Value
-    arrBomTab = loBoms.ListColumns(idxBomTab).DataBodyRange.Value
+    arrTaid = To2DColumnMatrix(loBoms.ListColumns(idxTaid).DataBodyRange)
+    arrBomTab = To2DColumnMatrix(loBoms.ListColumns(idxBomTab).DataBodyRange)
 
     For i = 1 To UBound(arrTaid, 1)
         taid = Trim$(CStr(arrTaid(i, 1)))
@@ -135,8 +135,8 @@ Private Sub AccumulateDemand(ByVal loWos As ListObject, ByVal dictBomTabByTaid A
 
     If loWos.DataBodyRange Is Nothing Then Exit Sub
 
-    arrAssembly = loWos.ListColumns(idxAssembly).DataBodyRange.Value
-    arrBuildQty = loWos.ListColumns(idxBuildQty).DataBodyRange.Value
+    arrAssembly = To2DColumnMatrix(loWos.ListColumns(idxAssembly).DataBodyRange)
+    arrBuildQty = To2DColumnMatrix(loWos.ListColumns(idxBuildQty).DataBodyRange)
 
     For i = 1 To UBound(arrAssembly, 1)
         assemblyId = Trim$(CStr(arrAssembly(i, 1)))
@@ -182,12 +182,12 @@ Private Sub AccumulateBomLines(ByVal bomTab As String, ByVal buildQty As Double,
 
     If idxQtyPer = 0 Then Exit Sub
 
-    If idxCompId > 0 Then arrCompId = loBom.ListColumns(idxCompId).DataBodyRange.Value
-    If idxPn > 0 Then arrPn = loBom.ListColumns(idxPn).DataBodyRange.Value
-    If idxRev > 0 Then arrRev = loBom.ListColumns(idxRev).DataBodyRange.Value
-    If idxDesc > 0 Then arrDesc = loBom.ListColumns(idxDesc).DataBodyRange.Value
-    If idxUom > 0 Then arrUom = loBom.ListColumns(idxUom).DataBodyRange.Value
-    arrQtyPer = loBom.ListColumns(idxQtyPer).DataBodyRange.Value
+    If idxCompId > 0 Then arrCompId = To2DColumnMatrix(loBom.ListColumns(idxCompId).DataBodyRange)
+    If idxPn > 0 Then arrPn = To2DColumnMatrix(loBom.ListColumns(idxPn).DataBodyRange)
+    If idxRev > 0 Then arrRev = To2DColumnMatrix(loBom.ListColumns(idxRev).DataBodyRange)
+    If idxDesc > 0 Then arrDesc = To2DColumnMatrix(loBom.ListColumns(idxDesc).DataBodyRange)
+    If idxUom > 0 Then arrUom = To2DColumnMatrix(loBom.ListColumns(idxUom).DataBodyRange)
+    arrQtyPer = To2DColumnMatrix(loBom.ListColumns(idxQtyPer).DataBodyRange)
 
     For i = 1 To UBound(arrQtyPer, 1)
         compId = ReadArrText(arrCompId, i)
@@ -268,6 +268,24 @@ Private Function ResolveDemandQtyColumn(ByVal loDemand As ListObject) As String
         ResolveDemandQtyColumn = "Quantity"
     Else
         ResolveDemandQtyColumn = vbNullString
+    End If
+End Function
+
+Private Function To2DColumnMatrix(ByVal rng As Range) As Variant
+    Dim v As Variant
+    Dim arr(1 To 1, 1 To 1) As Variant
+
+    If rng Is Nothing Then
+        To2DColumnMatrix = Empty
+        Exit Function
+    End If
+
+    v = rng.Value
+    If IsArray(v) Then
+        To2DColumnMatrix = v
+    Else
+        arr(1, 1) = v
+        To2DColumnMatrix = arr
     End If
 End Function
 

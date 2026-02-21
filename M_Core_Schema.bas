@@ -5,6 +5,7 @@ Option Explicit
 ' Purpose:
 '   Validate that the workbook schema (tabs/tables/columns) matches
 '   what is defined in SCHEMA!TBL_SCHEMA.
+'   SCHEMA!TBL_SCHEMA is the authoritative source for schema/header checks.
 '
 ' Inputs:
 '   - Sheet: "SCHEMA"
@@ -25,12 +26,25 @@ Option Explicit
 ' Date:    2025-12-19
 '===========================================================
 
+Public Function RunSchemaCheck(Optional ByVal showUserMessage As Boolean = True) As Boolean
+    Schema_Check showUserMessage
+    RunSchemaCheck = (CountSchemaIssues() = 0)
+End Function
+
+' Canonical schema checker entry point.
+' Source of truth: SCHEMA!TBL_SCHEMA defines workbook schema and expected headers.
+Public Sub Schema_Check(Optional ByVal showUserMessage As Boolean = True)
+    Call Schema_Validate_All(showUserMessage)
+End Sub
+
+' DEPRECATED compatibility shim.
+' Use RunSchemaCheck or Schema_Check for all new wiring.
 Public Sub ValidateSchema(Optional ByVal Strict As Boolean = False, Optional ByVal showUserMessage As Boolean = True)
     Const PROC_NAME As String = "ValidateSchema"
     On Error GoTo EH
 
     ' Strict reserved for future use
-    Call Schema_Validate_All(showUserMessage)
+    Schema_Check showUserMessage
 
 CleanExit:
     Exit Sub
@@ -38,10 +52,29 @@ CleanExit:
 EH:
     Debug.Print "Error in " & PROC_NAME & ": " & Err.Number & " - " & Err.Description
     If showUserMessage Then
-        MsgBox "Error " & Err.Number & " in " & PROC_NAME & ": " & Err.Description, vbCritical, PROC_NAME
+        MsgBox "Error " & Err.Number & " in " & PROC_NAME & ": " & Err.Description, vbOKOnly, PROC_NAME
     End If
     Resume CleanExit
 End Sub
+
+Private Function CountSchemaIssues() As Long
+    Dim ws As Worksheet
+    Dim lastRow As Long
+
+    On Error GoTo CleanFail
+    Set ws = ThisWorkbook.Worksheets("Schema_Check")
+
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).row
+    If lastRow < 2 Then
+        CountSchemaIssues = 0
+    Else
+        CountSchemaIssues = Application.WorksheetFunction.CountA(ws.Range("A2:A" & CStr(lastRow)))
+    End If
+    Exit Function
+
+CleanFail:
+    CountSchemaIssues = 999999
+End Function
 '===============================================================================
 ' Purpose:
 '   Determines which tabs should be excluded from schema "extra table" scanning.
@@ -95,7 +128,7 @@ Public Sub Schema_Validate_All(Optional ByVal showUserMessage As Boolean = True)
     Set wsSchema = SafeGetWorksheet(wb, "SCHEMA")
     If wsSchema Is Nothing Then
         If showUserMessage Then
-            MsgBox "Missing sheet: SCHEMA", vbCritical, PROC_NAME
+            MsgBox "Missing sheet: SCHEMA", vbOKOnly, PROC_NAME
         End If
         Exit Sub
     End If
@@ -103,7 +136,7 @@ Public Sub Schema_Validate_All(Optional ByVal showUserMessage As Boolean = True)
     Set loSchema = SafeGetListObject(wsSchema, "TBL_SCHEMA")
     If loSchema Is Nothing Then
         If showUserMessage Then
-            MsgBox "Missing table: SCHEMA!TBL_SCHEMA", vbCritical, PROC_NAME
+            MsgBox "Missing table: SCHEMA!TBL_SCHEMA", vbOKOnly, PROC_NAME
         End If
         Exit Sub
     End If
@@ -126,16 +159,16 @@ Public Sub Schema_Validate_All(Optional ByVal showUserMessage As Boolean = True)
     issues = issues + ValidateColumnsExist(wb, rules, wsOut, outRow)
 
     ' Summary
-    If showUserMessage Then
+    If showUserMessage And issues > 0 Then
         MsgBox "Schema validation complete. Issues found: " & issues & vbCrLf & _
-               "See the 'Schema_Check' sheet for details.", vbInformation, PROC_NAME
+               "See the 'Schema_Check' sheet for details.", vbOKOnly, PROC_NAME
     End If
 
     Exit Sub
 
 EH:
     If showUserMessage Then
-        MsgBox "Error in " & PROC_NAME & vbCrLf & "Err " & Err.Number & ": " & Err.Description, vbCritical, PROC_NAME
+        MsgBox "Error in " & PROC_NAME & vbCrLf & "Err " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     End If
 End Sub
 
@@ -374,7 +407,7 @@ Private Function HasListColumn(ByVal lo As ListObject, ByVal colName As String) 
     Exit Function
 EH:
     MsgBox "HasListColumn failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Schema Validation"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Schema Validation"
     HasListColumn = False
 End Function
 

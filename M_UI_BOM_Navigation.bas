@@ -25,24 +25,24 @@ Public Sub UI_GoTo_Selected_BOM_FromBOMS()
     Set loBoms = wsBoms.ListObjects(LO_BOMS)
 
     If ActiveSheet.Name <> SH_BOMS Then
-        MsgBox "Please run this from the BOMS sheet after selecting a BOM row.", vbInformation, "Go To Specific BOM"
+        MsgBox "Please run this from the BOMS sheet after selecting a BOM row.", vbOKOnly, "Go To Specific BOM"
         Exit Sub
     End If
 
     If loBoms.DataBodyRange Is Nothing Then
-        MsgBox "BOMS table has no data rows.", vbExclamation, "Go To Specific BOM"
+        MsgBox "BOMS table has no data rows.", vbOKOnly, "Go To Specific BOM"
         Exit Sub
     End If
 
     Set selectedCell = ActiveCell
     If selectedCell Is Nothing Then
-        MsgBox "Select any cell in the BOM row you want to open.", vbInformation, "Go To Specific BOM"
+        MsgBox "Select any cell in the BOM row you want to open.", vbOKOnly, "Go To Specific BOM"
         Exit Sub
     End If
 
     Set selectedRow = Intersect(selectedCell.EntireRow, loBoms.DataBodyRange)
     If selectedRow Is Nothing Then
-        MsgBox "Select a cell inside TBL_BOMS data rows, then run again.", vbExclamation, "Go To Specific BOM"
+        MsgBox "Select a cell inside TBL_BOMS data rows, then run again.", vbOKOnly, "Go To Specific BOM"
         Exit Sub
     End If
 
@@ -55,7 +55,7 @@ Public Sub UI_GoTo_Selected_BOM_FromBOMS()
     Next lc
 
     If idxBomTab = 0 Then
-        MsgBox "TBL_BOMS is missing the BOMTab column.", vbCritical, "Go To Specific BOM"
+        MsgBox "TBL_BOMS is missing the BOMTab column.", vbOKOnly, "Go To Specific BOM"
         Exit Sub
     End If
 
@@ -63,7 +63,7 @@ Public Sub UI_GoTo_Selected_BOM_FromBOMS()
     bomTabName = Trim$(CStr(loBoms.ListColumns(idxBomTab).DataBodyRange.Cells(rowOffset, 1).Value))
 
     If Len(bomTabName) = 0 Then
-        MsgBox "Selected BOMS row has a blank BOMTab value.", vbExclamation, "Go To Specific BOM"
+        MsgBox "Selected BOMS row has a blank BOMTab value.", vbOKOnly, "Go To Specific BOM"
         Exit Sub
     End If
 
@@ -73,7 +73,7 @@ Public Sub UI_GoTo_Selected_BOM_FromBOMS()
     On Error GoTo EH
 
     If wsTarget Is Nothing Then
-        MsgBox "Could not find worksheet '" & bomTabName & "' from the selected BOMS row.", vbExclamation, "Go To Specific BOM"
+        MsgBox "Could not find worksheet '" & bomTabName & "' from the selected BOMS row.", vbOKOnly, "Go To Specific BOM"
         Exit Sub
     End If
 
@@ -84,5 +84,5 @@ Public Sub UI_GoTo_Selected_BOM_FromBOMS()
 
 EH:
     MsgBox "Go To Specific BOM failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, PROC_NAME
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
 End Sub

@@ -41,8 +41,8 @@ Option Explicit
 Public Function Gate_Ready(Optional ByVal showUserMessage As Boolean = True) As Boolean
     Const PROC_NAME As String = "Gate_Ready"
 
-    Const SCHEMA_VALIDATOR_PROC As String = "M_Core_Schema.Schema_Validate_All"
-    Const DATA_VALIDATOR_PROC As String = "M_Core_DataIntegrity.Validate_DataIntegrity_All"
+    Const SCHEMA_VALIDATOR_PROC As String = "M_Core_Schema.Schema_Check"
+    Const DATA_VALIDATOR_PROC As String = "M_Core_DataIntegrity.Data_Check"
 
     Const SCHEMA_OUTPUT_SHEET As String = "Schema_Check"
     Const DATA_OUTPUT_SHEET As String = "Data_Check"
@@ -87,7 +87,7 @@ Public Function Gate_Ready(Optional ByVal showUserMessage As Boolean = True) As 
     If showUserMessage Then
         If Gate_Ready Then
             If ShouldShowGatePassMessage(wb) Then
-                MsgBox "Workbook Gate: PASS", vbInformation, "Gate"
+                MsgBox "Workbook Gate: PASS", vbOKOnly, "Gate"
             End If
         Else
             MsgBox "Workbook Gate: FAIL" & vbCrLf & _
@@ -96,7 +96,7 @@ Public Function Gate_Ready(Optional ByVal showUserMessage As Boolean = True) As 
                    "Schema issues: " & CStr(schemaIssues) & vbCrLf & _
                    "Data issues: " & CStr(dataIssues) & vbCrLf & _
                    "See '" & SCHEMA_OUTPUT_SHEET & "' and '" & DATA_OUTPUT_SHEET & "'.", _
-                   vbExclamation, "Gate"
+                   vbOKOnly, "Gate"
         End If
     End If
 
@@ -110,16 +110,22 @@ EH:
 
     If showUserMessage Then
         MsgBox "Gate failed." & vbCrLf & _
-               "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Gate"
+               "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Gate"
     End If
 
     Gate_Ready = False
     Resume CleanExit
 End Function
 
+' Canonical strict gate decision entry point.
+' Runs schema + data checkers and returns pass/fail only.
+Public Function RunGateCheck(Optional ByVal showUserMessage As Boolean = False) As Boolean
+    RunGateCheck = Gate_Ready(showUserMessage)
+End Function
+
 Public Sub Run_Gate_Check()
     Dim ok As Boolean
-    ok = Gate_Ready(True)
+    ok = RunGateCheck(True)
 End Sub
 
 '==========================
@@ -134,7 +140,7 @@ Private Function RunValidatorProc(ByVal fullyQualifiedProc As String, ByVal show
 EH:
     msg = "Failed to run validator: " & fullyQualifiedProc & " :: " & Err.Description
     MsgBox "Failed to run validator: " & fullyQualifiedProc & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Gate"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Gate"
     RunValidatorProc = False
 End Function
 
@@ -172,9 +178,9 @@ End Function
 
 
 Private Function ShouldShowGatePassMessage(ByVal wb As Workbook) As Boolean
-    ' Silent-on-success by default. If Landing has DEV MODE? = TRUE,
-    ' show pass message to support verbose diagnostic workflows.
-    ShouldShowGatePassMessage = LandingFlagValue(wb, "DEV MODE?", False)
+    ' Silent-on-success enforced to avoid popup noise in normal workflows.
+    ' Keep wb parameter for signature compatibility.
+    ShouldShowGatePassMessage = False
 End Function
 
 Private Function LandingFlagValue(ByVal wb As Workbook, ByVal headerName As String, ByVal defaultValue As Boolean) As Boolean

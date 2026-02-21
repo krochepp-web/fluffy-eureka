@@ -103,7 +103,7 @@ Public Sub NewSupplier()
     If Len(Trim$(CStr(v))) = 0 Then GoTo FailAndRollback
     If Schema_IsUnique(sSupplierName) Then
         If ValueExistsInColumn(lo, "SupplierName", CStr(v)) Then
-            MsgBox "SupplierName must be unique. '" & CStr(v) & "' already exists.", vbExclamation, "New Supplier"
+            MsgBox "SupplierName must be unique. '" & CStr(v) & "' already exists.", vbOKOnly, "New Supplier"
             GoTo FailAndRollback
         End If
     End If
@@ -136,6 +136,16 @@ Public Sub NewSupplier()
     nowStamp = Now
     StampAuditIfPresent lo, lr, userId, nowStamp
 
+    If Not M_Core_DataIntegrity.RunDataCheck(False) Then
+        Dim diSummary As String
+        diSummary = DataCheckSummary()
+        M_Core_Logging.LogWarn PROC_NAME, "Data integrity failed after supplier entry", _
+            "SupplierID=" & supplierId & "; Details=" & diSummary & "; ModuleVersion=" & MODULE_VERSION
+        MsgBox "Supplier was rolled back because schema/data integrity requirements failed." & vbCrLf & _
+               diSummary, vbOKOnly, "New Supplier"
+        GoTo FailAndRollback
+    End If
+
     M_Core_Logging.LogInfo PROC_NAME, "Created Supplier", "SupplierID=" & supplierId & "; ModuleVersion=" & MODULE_VERSION
     Exit Sub
 
@@ -148,8 +158,9 @@ FailAndRollback:
 
 EH:
     M_Core_Logging.LogError PROC_NAME, "Error creating supplier", "Err " & Err.Number & ": " & Err.Description, Err.Number
+    GoToLogSheet
     MsgBox "New Supplier failed. See Log sheet for details." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "New Supplier"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "New Supplier"
 End Sub
 
 '===============================================================================
@@ -182,7 +193,7 @@ Private Function Prompt_Validate_SchemaValue(ByVal sRow As Object, ByVal label A
     raw = Trim$(raw)
 
     If isReq And Len(raw) = 0 Then
-        MsgBox label & " is required.", vbExclamation, formTitle
+        MsgBox label & " is required.", vbOKOnly, formTitle
         Prompt_Validate_SchemaValue = vbNullString
         Exit Function
     End If
@@ -198,7 +209,7 @@ Private Function Prompt_Validate_SchemaValue(ByVal sRow As Object, ByVal label A
 
         Case "INTEGER"
             If Not IsNumeric(raw) Then
-                MsgBox label & " must be an integer.", vbExclamation, formTitle
+                MsgBox label & " must be an integer.", vbOKOnly, formTitle
                 Prompt_Validate_SchemaValue = vbNullString
                 Exit Function
             End If
@@ -206,7 +217,7 @@ Private Function Prompt_Validate_SchemaValue(ByVal sRow As Object, ByVal label A
 
         Case "DECIMAL", "NUMBER", "DOUBLE"
             If Not IsNumeric(raw) Then
-                MsgBox label & " must be a number.", vbExclamation, formTitle
+                MsgBox label & " must be a number.", vbOKOnly, formTitle
                 Prompt_Validate_SchemaValue = vbNullString
                 Exit Function
             End If
@@ -214,7 +225,7 @@ Private Function Prompt_Validate_SchemaValue(ByVal sRow As Object, ByVal label A
 
         Case "DATE"
             If Not IsDate(raw) Then
-                MsgBox label & " must be a date.", vbExclamation, formTitle
+                MsgBox label & " must be a date.", vbOKOnly, formTitle
                 Prompt_Validate_SchemaValue = vbNullString
                 Exit Function
             End If
@@ -228,7 +239,7 @@ Private Function Prompt_Validate_SchemaValue(ByVal sRow As Object, ByVal label A
     ' HelperName allowed values (named range)
     If Len(helperName) > 0 Then
         If Not ValueInNamedRange(ThisWorkbook, helperName, CStr(outVal)) Then
-            MsgBox label & " must be one of the allowed values in " & helperName & ".", vbExclamation, formTitle
+            MsgBox label & " must be one of the allowed values in " & helperName & ".", vbOKOnly, formTitle
             Prompt_Validate_SchemaValue = vbNullString
             Exit Function
         End If
@@ -237,14 +248,14 @@ Private Function Prompt_Validate_SchemaValue(ByVal sRow As Object, ByVal label A
     ' Min/Max bounds only if present in schema
     If hasMin Then
         If Not CompareGE(outVal, minV) Then
-            MsgBox label & " must be >= " & CStr(minV) & ".", vbExclamation, formTitle
+            MsgBox label & " must be >= " & CStr(minV) & ".", vbOKOnly, formTitle
             Prompt_Validate_SchemaValue = vbNullString
             Exit Function
         End If
     End If
     If hasMax Then
         If Not CompareLE(outVal, maxV) Then
-            MsgBox label & " must be <= " & CStr(maxV) & ".", vbExclamation, formTitle
+            MsgBox label & " must be <= " & CStr(maxV) & ".", vbOKOnly, formTitle
             Prompt_Validate_SchemaValue = vbNullString
             Exit Function
         End If
@@ -461,7 +472,7 @@ Private Function ValueInNamedRange(ByVal wb As Workbook, ByVal rangeName As Stri
     Exit Function
 EH:
     MsgBox "ValueInNamedRange failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Supplier Entry"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Supplier Entry"
     ValueInNamedRange = False
 End Function
 
@@ -471,7 +482,7 @@ Private Function CompareGE(ByVal a As Variant, ByVal b As Variant) As Boolean
     Exit Function
 EH:
     MsgBox "CompareGE failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Supplier Entry"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Supplier Entry"
     CompareGE = False
 End Function
 
@@ -481,7 +492,7 @@ Private Function CompareLE(ByVal a As Variant, ByVal b As Variant) As Boolean
     Exit Function
 EH:
     MsgBox "CompareLE failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Supplier Entry"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Supplier Entry"
     CompareLE = False
 End Function
 
@@ -536,3 +547,34 @@ Private Sub StampAuditIfPresent(ByVal lo As ListObject, ByVal lr As ListRow, ByV
 End Sub
 
 
+
+Private Sub GoToLogSheet()
+    On Error Resume Next
+    ThisWorkbook.Worksheets("Log").Activate
+    On Error GoTo 0
+End Sub
+
+Private Function DataCheckSummary() As String
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim r As Long
+    Dim detail As String
+
+    On Error GoTo Fallback
+    Set ws = ThisWorkbook.Worksheets("Data_Check")
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    If lastRow < 2 Then GoTo Fallback
+
+    For r = 2 To lastRow
+        If Len(Trim$(CStr(ws.Cells(r, 1).Value))) > 0 Then
+            detail = CStr(ws.Cells(r, 1).Value)
+            If Len(Trim$(CStr(ws.Cells(r, 2).Value))) > 0 Then detail = detail & " | " & CStr(ws.Cells(r, 2).Value)
+            If Len(Trim$(CStr(ws.Cells(r, 5).Value))) > 0 Then detail = detail & " | " & CStr(ws.Cells(r, 5).Value)
+            DataCheckSummary = detail
+            Exit Function
+        End If
+    Next r
+
+Fallback:
+    DataCheckSummary = "See Data_Check tab for failed rule details."
+End Function

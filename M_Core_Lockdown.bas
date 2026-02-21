@@ -69,12 +69,12 @@ Public Sub Lockdown_Remove()
         On Error GoTo EH
     Next ws
 
-    MsgBox "Lockdown removed (developer mode).", vbInformation, "Lockdown"
+    MsgBox "Lockdown removed (developer mode).", vbOKOnly, "Lockdown"
     Exit Sub
 
 EH:
     MsgBox "Lockdown_Remove failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Lockdown"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Lockdown"
 End Sub
 
 Private Sub Lockdown_Run(ByVal dryRun As Boolean)
@@ -130,7 +130,7 @@ Private Sub Lockdown_Run(ByVal dryRun As Boolean)
     WritePreview wb, plan, currentRole
 
     If dryRun Then
-        MsgBox "Lockdown dry run complete. Review 'Lockdown_Preview'.", vbInformation, "Lockdown"
+        MsgBox "Lockdown dry run complete. Review 'Lockdown_Preview'.", vbOKOnly, "Lockdown"
         Exit Sub
     End If
 
@@ -140,12 +140,12 @@ Private Sub Lockdown_Run(ByVal dryRun As Boolean)
     ApplyWorkbookStructure wb, pwd, True
 
 
-    MsgBox "Lockdown applied.", vbInformation, "Lockdown"
+    MsgBox "Lockdown applied.", vbOKOnly, "Lockdown"
     Exit Sub
 
 EH:
     MsgBox "Lockdown failed at step: " & gStep & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Lockdown"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Lockdown"
 End Sub
 
 '----------------------------

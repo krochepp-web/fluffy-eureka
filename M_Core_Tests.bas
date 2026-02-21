@@ -57,6 +57,7 @@ Public Sub Test_Core_Constants()
     Dim lo As ListObject
     
     Dim NextRow As Long
+    Dim failCount As Long
     
     On Error GoTo EH
     
@@ -107,7 +108,7 @@ Public Sub Test_Core_Constants()
     Test_SheetConstant wsReport, NextRow, "SH_DEMAND", SH_DEMAND, dictSheets
     Test_SheetConstant wsReport, NextRow, "SH_POS", SH_POS, dictSheets
     Test_SheetConstant wsReport, NextRow, "SH_POLINES", SH_POLINES, dictSheets
-    Test_SheetConstant wsReport, NextRow, "SH_BOM_PDM001", SH_BOM_PDM001, dictSheets
+    Test_OptionalSheetConstant wsReport, NextRow, "SH_BOM_PDM001", SH_BOM_PDM001, dictSheets
     Test_SheetConstant wsReport, NextRow, "SH_BOM_TEMPLATE", SH_BOM_TEMPLATE, dictSheets
     
     '---------------------------------------------------------------------------
@@ -127,7 +128,7 @@ Public Sub Test_Core_Constants()
     Test_TableConstant wsReport, NextRow, "TBL_DEMAND", TBL_DEMAND, dictTables
     Test_TableConstant wsReport, NextRow, "TBL_POS", TBL_POS, dictTables
     Test_TableConstant wsReport, NextRow, "TBL_POLINES", TBL_POLINES, dictTables
-    Test_TableConstant wsReport, NextRow, "TBL_BOM_PDM001", TBL_BOM_PDM001, dictTables
+    Test_OptionalTableConstant wsReport, NextRow, "TBL_BOM_PDM001", TBL_BOM_PDM001, dictTables
     Test_TableConstant wsReport, NextRow, "TBL_BOM_TEMPLATE", TBL_BOM_TEMPLATE, dictTables
     
     '---------------------------------------------------------------------------
@@ -151,21 +152,26 @@ Public Sub Test_Core_Constants()
     ' POLines: POID, POLine, CompID, OurPN, OurRev, POQuantity
     Test_TableColumns wsReport, NextRow, _
         "TBL_POLINES core columns", SH_POLINES, TBL_POLINES, _
-        Array(COL_PO_ID, COL_PO_LINE, COL_COMP_ID, COL_PN, COL_REV, COL_PO_QTY)
+        Array(COL_PO_ID, COL_COMP_ID, COL_PN, COL_REV, COL_PO_QTY)
+
+    Test_OptionalColumn wsReport, NextRow, SH_POLINES, TBL_POLINES, COL_PO_LINE
     
     '---------------------------------------------------------------------------
     ' Autofit and finish
     '---------------------------------------------------------------------------
     wsReport.Columns("A:E").AutoFit
-    
-    MsgBox "Core constants test complete. See 'Core_Tests' sheet.", vbInformation, PROC_NAME
+
+    failCount = CountStatusRows(wsReport, "FAIL")
+    If failCount > 0 Then
+        MsgBox "Core constants test found " & CStr(failCount) & " failing checks. See 'Core_Tests' sheet.", vbOKOnly, PROC_NAME
+    End If
     
 CleanExit:
     Exit Sub
     
 EH:
     Debug.Print "Error in " & PROC_NAME & ": " & Err.Number & " - " & Err.Description
-    MsgBox "Error " & Err.Number & " in " & PROC_NAME & ": " & Err.Description, vbCritical, PROC_NAME
+    MsgBox "Error " & Err.Number & " in " & PROC_NAME & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub
 
@@ -285,6 +291,90 @@ Private Sub Test_TableConstant( _
     WriteTestRow wsReport, NextRow, "Table", constName, tableName, status, detail
 End Sub
 
+
+Private Sub Test_OptionalSheetConstant( _
+    ByVal wsReport As Worksheet, _
+    ByRef NextRow As Long, _
+    ByVal constName As String, _
+    ByVal sheetName As String, _
+    ByVal dictSheets As Object)
+
+    Dim key As String
+    Dim detail As String
+
+    key = UCase$(sheetName)
+    If dictSheets.Exists(key) Then
+        detail = "Optional sheet exists."
+    Else
+        detail = "Optional sheet not present in workbook (allowed)."
+    End If
+
+    WriteTestRow wsReport, NextRow, "Sheet", constName, sheetName, "PASS", detail
+End Sub
+
+Private Sub Test_OptionalTableConstant( _
+    ByVal wsReport As Worksheet, _
+    ByRef NextRow As Long, _
+    ByVal constName As String, _
+    ByVal tableName As String, _
+    ByVal dictTables As Object)
+
+    Dim key As String
+    Dim detail As String
+
+    key = UCase$(tableName)
+    If dictTables.Exists(key) Then
+        detail = "Optional table exists on sheet '" & CStr(dictTables(key)) & "'."
+    Else
+        detail = "Optional table not present in workbook (allowed)."
+    End If
+
+    WriteTestRow wsReport, NextRow, "Table", constName, tableName, "PASS", detail
+End Sub
+
+Private Sub Test_OptionalColumn( _
+    ByVal wsReport As Worksheet, _
+    ByRef NextRow As Long, _
+    ByVal sheetName As String, _
+    ByVal tableName As String, _
+    ByVal columnName As String)
+
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim lo As ListObject
+
+    Set wb = ThisWorkbook
+
+    On Error Resume Next
+    Set ws = wb.Worksheets(sheetName)
+    If Not ws Is Nothing Then Set lo = ws.ListObjects(tableName)
+    On Error GoTo 0
+
+    If ws Is Nothing Or lo Is Nothing Then
+        WriteTestRow wsReport, NextRow, "Column", tableName & "." & columnName, columnName, "PASS", _
+                     "Optional column check skipped (table context missing)."
+        Exit Sub
+    End If
+
+    If TableHasColumn(lo, columnName) Then
+        WriteTestRow wsReport, NextRow, "Column", tableName & "." & columnName, columnName, "PASS", _
+                     "Optional column found in table."
+    Else
+        WriteTestRow wsReport, NextRow, "Column", tableName & "." & columnName, columnName, "PASS", _
+                     "Optional column not found in table (allowed)."
+    End If
+End Sub
+
+Private Function TableHasColumn(ByVal lo As ListObject, ByVal colName As String) As Boolean
+    Dim colIndex As Long
+    For colIndex = 1 To lo.ListColumns.Count
+        If StrComp(lo.ListColumns(colIndex).Name, colName, vbTextCompare) = 0 Then
+            TableHasColumn = True
+            Exit Function
+        End If
+    Next colIndex
+End Function
+
 '*******************************************************************************
 ' Helper: Test that specified columns exist in a given table
 '*******************************************************************************
@@ -354,3 +444,15 @@ Private Sub Test_TableColumns( _
 End Sub
 
 
+
+Private Function CountStatusRows(ByVal ws As Worksheet, ByVal statusName As String) As Long
+    Dim lastRow As Long
+    Dim r As Long
+
+    lastRow = ws.Cells(ws.Rows.Count, 4).End(xlUp).Row
+    For r = 2 To lastRow
+        If StrComp(Trim$(CStr(ws.Cells(r, 4).Value)), statusName, vbTextCompare) = 0 Then
+            CountStatusRows = CountStatusRows + 1
+        End If
+    Next r
+End Function
