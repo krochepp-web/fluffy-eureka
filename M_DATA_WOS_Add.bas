@@ -184,6 +184,13 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
     If ColumnExists(loWos, "BuildStatus") Then SetByHeader loWos, lr, "BuildStatus", BUILD_STATUS_PLANNED
     If ColumnExists(loWos, "BuildNotes") Then SetByHeader loWos, lr, "BuildNotes", buildNotes
 
+    Dim missingRequired As String
+    missingRequired = EnsureRequiredFieldsFilled(loWos, lr, SH_WOS, TBL_WOS)
+    If Len(missingRequired) > 0 Then
+        If Not lr Is Nothing Then lr.Delete
+        Err.Raise vbObjectError + 7007, PROC_NAME, "Missing required field(s) after defaults: " & missingRequired
+    End If
+
     nowStamp = Now
     actor = SafeActorName()
     StampAuditIfPresent loWos, lr, actor, nowStamp
@@ -438,6 +445,87 @@ Private Function GetSchemaDefaultValue(ByVal tabName As String, ByVal tableName 
             Exit Function
         End If
     Next r
+End Function
+
+Private Function EnsureRequiredFieldsFilled(ByVal lo As ListObject, ByVal lr As ListRow, ByVal tabName As String, ByVal tableName As String) As String
+    Const SCHEMA_TABLE As String = "TBL_SCHEMA"
+    Const H_TAB As String = "TAB_NAME"
+    Const H_TBL As String = "TABLE_NAME"
+    Const H_COL As String = "COLUMN_HEADER"
+    Const H_REQ As String = "IsRequired"
+    Const H_DEF As String = "DefaultValue"
+
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim loSchema As ListObject
+    Dim idxTab As Long, idxTbl As Long, idxCol As Long, idxReq As Long, idxDef As Long
+    Dim arr As Variant
+    Dim r As Long
+    Dim missingList As String
+
+    Set wb = ThisWorkbook
+
+    For Each ws In wb.Worksheets
+        On Error Resume Next
+        Set loSchema = ws.ListObjects(SCHEMA_TABLE)
+        On Error GoTo 0
+        If Not loSchema Is Nothing Then Exit For
+    Next ws
+    If loSchema Is Nothing Then Exit Function
+    If loSchema.DataBodyRange Is Nothing Then Exit Function
+
+    idxTab = GetColIndex(loSchema, H_TAB)
+    idxTbl = GetColIndex(loSchema, H_TBL)
+    idxCol = GetColIndex(loSchema, H_COL)
+    idxReq = GetColIndex(loSchema, H_REQ)
+    idxDef = GetColIndex(loSchema, H_DEF)
+    If idxTab = 0 Or idxTbl = 0 Or idxCol = 0 Or idxReq = 0 Then Exit Function
+
+    arr = loSchema.DataBodyRange.Value
+    For r = 1 To UBound(arr, 1)
+        Dim schemaTab As String, schemaTbl As String, colH As String
+        schemaTab = Trim$(CStr(arr(r, idxTab)))
+        schemaTbl = Trim$(CStr(arr(r, idxTbl)))
+        colH = Trim$(CStr(arr(r, idxCol)))
+
+        If StrComp(schemaTab, tabName, vbTextCompare) = 0 _
+           And StrComp(schemaTbl, tableName, vbTextCompare) = 0 _
+           And Len(colH) > 0 Then
+
+            If IsTrueish(arr(r, idxReq)) And ColumnExists(lo, colH) Then
+                If CellIsBlankish(lr.Range.Cells(1, GetColIndex(lo, colH)).Value) Then
+                    Dim defVal As String
+                    If idxDef > 0 Then defVal = Trim$(CStr(arr(r, idxDef)))
+                    If Len(defVal) > 0 Then
+                        SetByHeader lo, lr, colH, defVal
+                    End If
+                End If
+
+                If CellIsBlankish(lr.Range.Cells(1, GetColIndex(lo, colH)).Value) Then
+                    If Len(missingList) > 0 Then missingList = missingList & ", "
+                    missingList = missingList & colH
+                End If
+            End If
+        End If
+    Next r
+
+    EnsureRequiredFieldsFilled = missingList
+End Function
+
+Private Function IsTrueish(ByVal v As Variant) As Boolean
+    Dim s As String
+    s = UCase$(Trim$(CStr(v)))
+    IsTrueish = (s = "Y" Or s = "YES" Or s = "TRUE" Or s = "1")
+End Function
+
+Private Function CellIsBlankish(ByVal v As Variant) As Boolean
+    If IsError(v) Then
+        CellIsBlankish = True
+    ElseIf IsNull(v) Or IsEmpty(v) Then
+        CellIsBlankish = True
+    Else
+        CellIsBlankish = (Len(Trim$(CStr(v))) = 0)
+    End If
 End Function
 
 Private Sub StampAuditIfPresent(ByVal lo As ListObject, ByVal lr As ListRow, ByVal actor As String, ByVal ts As Date)
