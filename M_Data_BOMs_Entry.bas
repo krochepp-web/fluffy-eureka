@@ -151,7 +151,7 @@ Public Sub SYS_CreateBOMForAssemblyFromInputs( _
 
     On Error GoTo EH
 
-If Not GateReady_Safe(True) Then GoTo CleanExit
+If Not GateReady_Safe(False) Then GoTo CleanExit
 
 Set wb = ThisWorkbook
 Set wsTemplate = wb.Worksheets(SH_TEMPLATE)
