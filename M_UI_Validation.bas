@@ -7,66 +7,39 @@ Option Explicit
 '   These appear in Alt+F8 and are safe to bind to buttons.
 '
 ' Entry points:
-'   - UI_Run_AllChecks        (primary "Run All Checks" button)
-'   - UI_Run_GateCheck        (schema + data gate)
-'   - UI_Run_DataIntegrityCheck
+'   - UI_OP_RunAllChecks        (compatibility wrapper; routes to UI_OP_RunGateCheck)
+'   - UI_OP_RunGateCheck        (strict decision only; schema + data gate)
+'   - UI_OP_RunDataIntegrityCheck
 '
 ' Depends on:
-'   - Gate_Ready(showUserMessage As Boolean) As Boolean
+'   - M_Core_Gate.RunGateCheck(showUserMessage As Boolean) As Boolean
+'   - M_Core_HealthCheck.DEV_RunDiagnostics(showUserMessage As Boolean)
 '   - M_Core_DataIntegrity.Validate_DataIntegrity_All(showUserMessage As Boolean) As Boolean
 '
 ' Version: v1.0.0
 '===========================================================
 
-Public Sub UI_Run_AllChecks()
-    Const PROC_NAME As String = "UI_Run_AllChecks"
-    Const RUN_DATA_INTEGRITY_EVEN_IF_GATE_FAILS As Boolean = True
-
-    Dim gateOk As Boolean
-    Dim diOk As Boolean
-
-    On Error GoTo EH
-
-    ' 1) Gate (schema + data per spec)
-    gateOk = Gate_Ready(True)
-
-    ' 2) Optional refresh of Data_Check if gate fails early
-    diOk = True
-    If (gateOk = False And RUN_DATA_INTEGRITY_EVEN_IF_GATE_FAILS) Then
-        diOk = M_Core_DataIntegrity.Validate_DataIntegrity_All(False)
-    End If
-
-    If gateOk Then
-        MsgBox "All Checks: PASS (Workbook ready).", vbInformation, "All Checks"
-        SafeLog PROC_NAME, 0, "PASS", "Gate returned True."
-    Else
-        MsgBox "All Checks: FAIL." & vbCrLf & _
-               "Review 'Schema_Check' and/or 'Data_Check'.", vbExclamation, "All Checks"
-        SafeLog PROC_NAME, 0, "FAIL", "Gate returned False. DataRefresh=" & CStr(diOk)
-    End If
-
-    Exit Sub
-
-EH:
-    MsgBox "All checks failed to run." & vbCrLf & _
-           "Err " & Err.Number & ": " & Err.Description, vbExclamation, "All Checks"
-    SafeLog PROC_NAME, Err.Number, Err.Description, "UI entry point failure."
+Public Sub UI_OP_RunAllChecks()
+    ' Compatibility alias. Semantics unified with UI_OP_RunGateCheck.
+    UI_OP_RunGateCheck
 End Sub
 
-Public Sub UI_Run_GateCheck()
-    Const PROC_NAME As String = "UI_Run_GateCheck"
+Public Sub UI_OP_RunGateCheck()
+    Const PROC_NAME As String = "UI_OP_RunGateCheck"
 
     Dim ok As Boolean
     On Error GoTo EH
 
-    ok = Gate_Ready(True)
+    ok = M_Core_Gate.RunGateCheck(False)
 
     If ok Then
-        MsgBox "Workbook Gate: PASS (ready).", vbInformation, "Gate"
+        If M_Core_UX.ShouldShowSuccessMessage("UI_OP_RunGateCheck") Then
+            MsgBox "Workbook Gate: PASS (ready).", vbOKOnly, "Gate"
+        End If
         SafeLog PROC_NAME, 0, "PASS", "Gate returned True."
     Else
         MsgBox "Workbook Gate: FAIL (not ready)." & vbCrLf & _
-               "Review 'Schema_Check' and/or 'Data_Check'.", vbExclamation, "Gate"
+               "Review 'Schema_Check' and/or 'Data_Check'.", vbOKOnly, "Gate"
         SafeLog PROC_NAME, 0, "FAIL", "Gate returned False."
     End If
 
@@ -74,24 +47,27 @@ Public Sub UI_Run_GateCheck()
 
 EH:
     MsgBox "Gate check failed to run." & vbCrLf & _
-           "Err " & Err.Number & ": " & Err.Description, vbExclamation, "Gate"
+           "Err " & Err.Number & ": " & Err.Description, vbOKOnly, "Gate"
     SafeLog PROC_NAME, Err.Number, Err.Description, "UI entry point failure."
 End Sub
 
-Public Sub UI_Run_DataIntegrityCheck()
-    Const PROC_NAME As String = "UI_Run_DataIntegrityCheck"
+
+Public Sub UI_OP_RunDataIntegrityCheck()
+    Const PROC_NAME As String = "UI_OP_RunDataIntegrityCheck"
 
     Dim ok As Boolean
     On Error GoTo EH
 
-    ok = M_Core_DataIntegrity.Validate_DataIntegrity_All(True)
+    ok = M_Core_DataIntegrity.Validate_DataIntegrity_All(False)
 
     If ok Then
-        MsgBox "Data Integrity: PASS (0 issues).", vbInformation, "Validation"
+        If M_Core_UX.ShouldShowSuccessMessage("UI_OP_RunDataIntegrityCheck") Then
+            MsgBox "Data Integrity: PASS (0 issues).", vbOKOnly, "Validation"
+        End If
         SafeLog PROC_NAME, 0, "PASS", "Data integrity returned True."
     Else
         MsgBox "Data Integrity: FAIL (issues found)." & vbCrLf & _
-               "Review the 'Data_Check' sheet.", vbExclamation, "Validation"
+               "Review the 'Data_Check' sheet.", vbOKOnly, "Validation"
         SafeLog PROC_NAME, 0, "FAIL", "Data integrity returned False."
     End If
 
@@ -99,7 +75,7 @@ Public Sub UI_Run_DataIntegrityCheck()
 
 EH:
     MsgBox "Data integrity failed to run." & vbCrLf & _
-           "Err " & Err.Number & ": " & Err.Description, vbExclamation, "Validation"
+           "Err " & Err.Number & ": " & Err.Description, vbOKOnly, "Validation"
     SafeLog PROC_NAME, Err.Number, Err.Description, "UI entry point failure."
 End Sub
 

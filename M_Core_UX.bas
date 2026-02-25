@@ -46,7 +46,11 @@ Public Sub ShowFailureMessageWithLogFocus( _
     End If
     msg = msg & vbCrLf & "See Log sheet for details."
 
-    MsgBox msg, vbExclamation, uiTitle
+    On Error Resume Next
+    ThisWorkbook.Worksheets("Log").Activate
+    On Error GoTo 0
+
+    MsgBox msg, vbOKOnly, uiTitle
 End Sub
 
 Private Function ErrDescriptionOrFallback(ByVal details As String) As String

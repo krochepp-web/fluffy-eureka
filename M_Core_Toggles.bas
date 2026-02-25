@@ -120,7 +120,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error entering critical section", Err.Description, Err.Number, activityId
     MsgBox "Error entering critical section." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Application State"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Application State"
     ' Do not raise further; better to leave state unchanged than crash.
     Resume CleanExit
 End Sub
@@ -161,7 +161,7 @@ EH:
     LogEvent PROC_NAME, LOG_LEVEL_ERROR, _
              "Error exiting critical section", Err.Description, Err.Number, activityId
     MsgBox "Error exiting critical section." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Application State"
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Application State"
     ' Best effort to restore state even on error.
     Resume CleanExit
 End Sub
@@ -180,7 +180,7 @@ End Function
 ' Test harness
 '===============================================================================
 
-Public Sub Test_Core_Toggles()
+Public Sub DEV_TestCoreToggles()
     '-------------------------------------------------------------------------
     ' Purpose:
     '   Smoke test for M_Core_Toggles. Demonstrates that:
@@ -191,7 +191,7 @@ Public Sub Test_Core_Toggles()
     '   This is a non-destructive test and is safe to run at any time, but
     '   should not be wired to normal user buttons.
     '-------------------------------------------------------------------------
-    Const PROC_NAME As String = "Test_Core_Toggles"
+    Const PROC_NAME As String = "DEV_TestCoreToggles"
     
     Dim originalScreenUpdating As Boolean
     Dim originalEnableEvents As Boolean
@@ -226,17 +226,17 @@ Public Sub Test_Core_Toggles()
           "  Calculation    = " & CalcModeToString(Application.Calculation)
     Debug.Print msg
     
-    MsgBox "Test_Core_Toggles completed. Check Immediate Window for state snapshots.", _
-           vbInformation, PROC_NAME
+    MsgBox "DEV_TestCoreToggles completed. Check Immediate Window for state snapshots.", _
+           vbOKOnly, PROC_NAME
     
 CleanExit:
     Exit Sub
     
 EH:
     On Error Resume Next
-    LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in Test_Core_Toggles", Err.Description, Err.Number
-    MsgBox "Error in Test_Core_Toggles." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbCritical, PROC_NAME
+    LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in DEV_TestCoreToggles", Err.Description, Err.Number
+    MsgBox "Error in DEV_TestCoreToggles." & vbCrLf & _
+           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub
 

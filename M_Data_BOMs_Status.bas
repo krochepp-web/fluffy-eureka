@@ -64,7 +64,7 @@ Public Function ValidateBomStatusTransition(ByVal oldStatus As String, ByVal new
     ValidateBomStatusTransition = False
 
     If Len(oldNorm) = 0 Or Len(newNorm) = 0 Then
-        MsgBox "Invalid BOM status transition: unknown status value.", vbExclamation, "BOM Status"
+        MsgBox "Invalid BOM status transition: unknown status value.", vbOKOnly, "BOM Status"
         Exit Function
     End If
 
@@ -97,7 +97,7 @@ Public Function ValidateBomStatusTransition(ByVal oldStatus As String, ByVal new
 
     If Not ValidateBomStatusTransition Then
         MsgBox "Status transition blocked: " & oldNorm & " -> " & newNorm & _
-               ". Role '" & role & "' is not permitted.", vbExclamation, "BOM Status"
+               ". Role '" & role & "' is not permitted.", vbOKOnly, "BOM Status"
     End If
 End Function
 
