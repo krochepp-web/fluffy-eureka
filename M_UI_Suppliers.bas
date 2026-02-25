@@ -29,7 +29,7 @@ Public Sub UI_OP_NewSupplier()
 
     FocusSuppliersAndSortNewest
 
-    ok = M_Core_Gate.Gate_Ready(False)
+    ok = M_Core_Gate.Gate_Ready(True)
     If Not ok Then
         M_Core_Logging.LogWarn PROC_NAME, "Blocked by Gate"
         Exit Sub

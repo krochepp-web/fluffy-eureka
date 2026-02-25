@@ -53,7 +53,7 @@ Public Sub UI_OP_AddWOSBuild()
 
     FocusWosSheet
 
-    If Not Gate_Ready(False) Then Exit Sub
+    If Not Gate_Ready(True) Then Exit Sub
 
     assemblyId = Trim$(InputBox("Top assembly part number to build (AssemblyID / TAID):", "New Build"))
     If Len(assemblyId) = 0 Then Exit Sub
@@ -134,7 +134,7 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
 
     FocusWosSheet
 
-    If Not Gate_Ready(False) Then Exit Sub
+    If Not Gate_Ready(True) Then Exit Sub
 
     assemblyId = Trim$(assemblyId)
     destination = Trim$(destination)

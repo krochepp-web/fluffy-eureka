@@ -29,7 +29,7 @@ Public Sub UI_OP_NewComponent()
 
     FocusCompsAndSortNewest
 
-    If Not M_Core_Gate.Gate_Ready(False) Then
+    If Not M_Core_Gate.Gate_Ready(True) Then
         M_Core_Logging.LogWarn PROC_NAME, "Blocked by Gate", "ModuleVersion=" & MODULE_VERSION
         Exit Sub
     End If

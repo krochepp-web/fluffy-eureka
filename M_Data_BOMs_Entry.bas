@@ -48,7 +48,7 @@ Public Sub UI_OP_CreateBOMForAssembly( _
 
     FocusBomsSheet
 
-    If Not GateReady_Safe(False) Then Exit Sub
+    If Not GateReady_Safe(True) Then Exit Sub
 
     taId = Trim$(taIdIn)
     taPn = Trim$(taPnIn)
@@ -91,6 +91,11 @@ EH:
     GoToLogSheet
     MsgBox "Manual BOM creation failed." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
+End Sub
+
+' Compatibility wrapper for legacy button/macro assignments.
+Public Sub UI_Create_BOM_For_Assembly()
+    UI_OP_CreateBOMForAssembly
 End Sub
 
 Private Sub Create_BOM_For_Assembly_Worker( _

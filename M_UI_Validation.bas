@@ -79,6 +79,11 @@ EH:
     SafeLog PROC_NAME, Err.Number, Err.Description, "UI entry point failure."
 End Sub
 
+' Compatibility wrapper for legacy macro name.
+Public Sub UI_Run_DataIntegrityCheck()
+    UI_OP_RunDataIntegrityCheck
+End Sub
+
 '-----------------------------------------------------------
 ' Helpers
 '-----------------------------------------------------------

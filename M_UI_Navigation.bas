@@ -197,6 +197,14 @@ Sub UI_NAV_GoToSheetComps()
     ' Range("A1").Select
 End Sub
 
+
+Sub UI_NAV_GoToSheetWOS()
+    Worksheets("WOS").Activate
+
+    ActiveWindow.ScrollRow = 1
+    ActiveWindow.ScrollColumn = 1
+End Sub
+
 Sub UI_NAV_GoToSheetRHistory()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
