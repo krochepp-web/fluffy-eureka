@@ -55,7 +55,7 @@ Public Sub Debug_Report(ByVal procName As String, ByVal errNumber As Long, ByVal
           "No     = Continue (Resume Next)" & vbCrLf & _
           "Cancel = Stop execution"
 
-    choice = MsgBox(msg, vbYesNoCancel + vbCritical, "Debug Report")
+    choice = MsgBox(msg, vbYesNoCancel, "Debug Report")
 
     Select Case choice
         Case vbYes
