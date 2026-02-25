@@ -37,8 +37,8 @@ Option Explicit
 
 Private Const MODULE_VERSION As String = "3.5.3"
 
-Public Sub NewSupplier()
-    Const PROC_NAME As String = "M_Data_Suppliers_Entry.NewSupplier"
+Public Sub SYS_NewSupplier()
+    Const PROC_NAME As String = "M_Data_Suppliers_Entry.SYS_NewSupplier"
 
     ' SupplierID format per your standard: SUP-#### (max+1)
     Const SUPPLIER_ID_PREFIX As String = "SUP-"

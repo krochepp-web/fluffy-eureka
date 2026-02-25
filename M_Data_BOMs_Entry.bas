@@ -30,13 +30,13 @@ Option Explicit
 ' Date: 2026-02-07
 '===============================================================================
 
-Public Sub UI_Create_BOM_For_Assembly( _
+Public Sub UI_OP_CreateBOMForAssembly( _
     Optional ByVal taIdIn As String = "", _
     Optional ByVal taPnIn As String = "", _
     Optional ByVal taRevIn As String = "", _
     Optional ByVal taDescIn As String = "", _
     Optional ByVal bomNotesIn As String = "")
-    Const PROC_NAME As String = "M_Data_BOMs_Entry.UI_Create_BOM_For_Assembly"
+    Const PROC_NAME As String = "M_Data_BOMs_Entry.UI_OP_CreateBOMForAssembly"
 
     Dim taId As String
     Dim taPn As String
@@ -100,17 +100,17 @@ Private Sub Create_BOM_For_Assembly_Worker( _
     ByVal taDesc As String, _
     Optional ByVal bomNotes As String = "", _
     Optional ByVal showSuccessMessage As Boolean = False)
-    Create_BOM_For_Assembly_FromInputs taId, taPn, taRev, taDesc, bomNotes, showSuccessMessage
+    SYS_CreateBOMForAssemblyFromInputs taId, taPn, taRev, taDesc, bomNotes, showSuccessMessage
 End Sub
 
-Public Sub Create_BOM_For_Assembly_FromInputs( _
+Public Sub SYS_CreateBOMForAssemblyFromInputs( _
     ByVal taId As String, _
     ByVal taPn As String, _
     ByVal taRev As String, _
     ByVal taDesc As String, _
     Optional ByVal bomNotes As String = "", _
     Optional ByVal showSuccessMessage As Boolean = False)
-    Const PROC_NAME As String = "M_Data_BOMs_Entry.Create_BOM_For_Assembly_FromInputs"
+    Const PROC_NAME As String = "M_Data_BOMs_Entry.SYS_CreateBOMForAssemblyFromInputs"
 
     Const SH_TEMPLATE As String = "BOM_TEMPLATE"
     Const LO_TEMPLATE As String = "TBL_BOM_TEMPLATE"
@@ -290,7 +290,7 @@ If Not M_Core_DataIntegrity.RunDataCheck(False) Then
     GoTo CleanExit
 End If
 
-If showSuccessMessage And M_Core_UX.ShouldShowSuccessMessage("UI_Create_BOM_For_Assembly") Then
+If showSuccessMessage And M_Core_UX.ShouldShowSuccessMessage("UI_OP_CreateBOMForAssembly") Then
     MsgBox "New BOM created: " & bomId & vbCrLf & _
               "Sheet: " & newSheetName & vbCrLf & _
               "TAID: " & taId & vbCrLf & _

@@ -123,7 +123,7 @@ Public Function RunGateCheck(Optional ByVal showUserMessage As Boolean = False) 
     RunGateCheck = Gate_Ready(showUserMessage)
 End Function
 
-Public Sub Run_Gate_Check()
+Public Sub DEV_RunGateCheck()
     Dim ok As Boolean
     ok = RunGateCheck(True)
 End Sub

@@ -568,7 +568,7 @@ End Function
 ' Test harness
 '===============================================================================
 
-Public Sub Test_Core_Utils()
+Public Sub DEV_TestCoreUtils()
     '-------------------------------------------------------------------------
     ' Purpose:
     '   Light sanity checks for core utilities. This is not a full unit test
@@ -581,7 +581,7 @@ Public Sub Test_Core_Utils()
     '   - Update sheet/table/column names below to match a small, safe area
     '     of the workbook (e.g., TBL_SUPPLIERS on Suppliers sheet).
     '-------------------------------------------------------------------------
-    Const PROC_NAME As String = "Test_Core_Utils"
+    Const PROC_NAME As String = "DEV_TestCoreUtils"
     
     Dim wb As Workbook
     Dim ws As Worksheet
@@ -598,14 +598,14 @@ Public Sub Test_Core_Utils()
     Set lo = SafeGetListObject(ws, "TBL_SUPPLIERS")
     
     If lo Is Nothing Then
-        MsgBox "Test_Core_Utils: TBL_SUPPLIERS not found on Suppliers sheet.", vbOKOnly, PROC_NAME
+        MsgBox "DEV_TestCoreUtils: TBL_SUPPLIERS not found on Suppliers sheet.", vbOKOnly, PROC_NAME
         GoTo CleanExit
     End If
     
     ' Build dictionary on SupplierID
     Set dic = BuildDictionaryByColumn(lo, "SupplierID")
     If dic Is Nothing Then
-        MsgBox "Test_Core_Utils: Failed to build dictionary on SupplierID.", vbOKOnly, PROC_NAME
+        MsgBox "DEV_TestCoreUtils: Failed to build dictionary on SupplierID.", vbOKOnly, PROC_NAME
         GoTo CleanExit
     End If
     
@@ -616,18 +616,18 @@ Public Sub Test_Core_Utils()
         testRow = dic.Item(firstKey)
         
         sampleValue = SafeGetValue(lo, testRow, "SupplierName", "N/A")
-        Debug.Print "Test_Core_Utils: SupplierID=" & firstKey & " Name=" & sampleValue
+        Debug.Print "DEV_TestCoreUtils: SupplierID=" & firstKey & " Name=" & sampleValue
     End If
     
-    MsgBox "Test_Core_Utils completed. Check Immediate Window for details.", vbOKOnly, PROC_NAME
+    MsgBox "DEV_TestCoreUtils completed. Check Immediate Window for details.", vbOKOnly, PROC_NAME
     
 CleanExit:
     Exit Sub
     
 EH:
     On Error Resume Next
-    LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in Test_Core_Utils", Err.Description, Err.Number
-    MsgBox "Error in Test_Core_Utils." & vbCrLf & _
+    LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in DEV_TestCoreUtils", Err.Description, Err.Number
+    MsgBox "Error in DEV_TestCoreUtils." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub

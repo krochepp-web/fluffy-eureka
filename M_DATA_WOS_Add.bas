@@ -34,8 +34,8 @@ Private Const MODULE_VERSION As String = "0.1.0"
 Private Const BUILD_ID_PREFIX As String = "NSWO-"
 Private Const BUILD_STATUS_PLANNED As String = "PLANNED"
 
-Public Sub UI_Add_WOS_Build()
-    Const PROC_NAME As String = "M_DATA_WOS_Add.UI_Add_WOS_Build"
+Public Sub UI_OP_AddWOSBuild()
+    Const PROC_NAME As String = "M_DATA_WOS_Add.UI_OP_AddWOSBuild"
 
     Dim assemblyId As String
     Dim dueDateText As String
@@ -106,7 +106,7 @@ Public Sub UI_Add_WOS_Build()
         Exit Sub
     End If
 
-    Add_WOS_Build_FromInputs assemblyId, dueDate, buildQty, destination, "", "", deliveryMethod, dockDate, transitTime
+    SYS_AddWOSBuildFromInputs assemblyId, dueDate, buildQty, destination, "", "", deliveryMethod, dockDate, transitTime
     Exit Sub
 
 EH:
@@ -115,10 +115,10 @@ EH:
     M_Core_UX.ShowFailureMessageWithLogFocus PROC_NAME, "New Build", "New build failed.", Err.Description, Err.Number
 End Sub
 
-Public Sub Add_WOS_Build_FromInputs(ByVal assemblyId As String, ByVal dueDate As Date, ByVal buildQty As Long, ByVal destination As String, _
+Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate As Date, ByVal buildQty As Long, ByVal destination As String, _
                                     Optional ByVal buildName As String = "", Optional ByVal buildNotes As String = "", _
                                     Optional ByVal deliveryMethod As String = "", Optional ByVal dockDate As Variant, Optional ByVal transitTime As Variant)
-    Const PROC_NAME As String = "M_DATA_WOS_Add.Add_WOS_Build_FromInputs"
+    Const PROC_NAME As String = "M_DATA_WOS_Add.SYS_AddWOSBuildFromInputs"
 
     Dim wb As Workbook
     Dim wsWos As Worksheet
@@ -198,7 +198,7 @@ Public Sub Add_WOS_Build_FromInputs(ByVal assemblyId As String, ByVal dueDate As
         "; DeliveryMethod=" & deliveryMethod & "; DockDate=" & IIf(IsMissing(dockDate), "", CStr(dockDate)) & _
         "; TransitTime=" & IIf(IsMissing(transitTime), "", CStr(transitTime)) & "; DueCol=" & dueDateCol & "; Version=" & MODULE_VERSION
 
-    If M_Core_UX.ShouldShowSuccessMessage("Add_WOS_Build_FromInputs") Then
+    If M_Core_UX.ShouldShowSuccessMessage("SYS_AddWOSBuildFromInputs") Then
         MsgBox "Build created successfully." & vbCrLf & _
                "BuildID: " & buildId, vbOKOnly, "New Build"
     End If

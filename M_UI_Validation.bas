@@ -7,25 +7,25 @@ Option Explicit
 '   These appear in Alt+F8 and are safe to bind to buttons.
 '
 ' Entry points:
-'   - UI_Run_AllChecks        (compatibility wrapper; routes to UI_Run_GateCheck)
-'   - UI_Run_GateCheck        (strict decision only; schema + data gate)
-'   - UI_Run_DataIntegrityCheck
+'   - UI_OP_RunAllChecks        (compatibility wrapper; routes to UI_OP_RunGateCheck)
+'   - UI_OP_RunGateCheck        (strict decision only; schema + data gate)
+'   - UI_OP_RunDataIntegrityCheck
 '
 ' Depends on:
 '   - M_Core_Gate.RunGateCheck(showUserMessage As Boolean) As Boolean
-'   - M_Core_HealthCheck.RunDiagnostics(showUserMessage As Boolean)
+'   - M_Core_HealthCheck.DEV_RunDiagnostics(showUserMessage As Boolean)
 '   - M_Core_DataIntegrity.Validate_DataIntegrity_All(showUserMessage As Boolean) As Boolean
 '
 ' Version: v1.0.0
 '===========================================================
 
-Public Sub UI_Run_AllChecks()
-    ' Compatibility alias. Semantics unified with UI_Run_GateCheck.
-    UI_Run_GateCheck
+Public Sub UI_OP_RunAllChecks()
+    ' Compatibility alias. Semantics unified with UI_OP_RunGateCheck.
+    UI_OP_RunGateCheck
 End Sub
 
-Public Sub UI_Run_GateCheck()
-    Const PROC_NAME As String = "UI_Run_GateCheck"
+Public Sub UI_OP_RunGateCheck()
+    Const PROC_NAME As String = "UI_OP_RunGateCheck"
 
     Dim ok As Boolean
     On Error GoTo EH
@@ -33,7 +33,7 @@ Public Sub UI_Run_GateCheck()
     ok = M_Core_Gate.RunGateCheck(False)
 
     If ok Then
-        If M_Core_UX.ShouldShowSuccessMessage("UI_Run_GateCheck") Then
+        If M_Core_UX.ShouldShowSuccessMessage("UI_OP_RunGateCheck") Then
             MsgBox "Workbook Gate: PASS (ready).", vbOKOnly, "Gate"
         End If
         SafeLog PROC_NAME, 0, "PASS", "Gate returned True."
@@ -52,8 +52,8 @@ EH:
 End Sub
 
 
-Public Sub UI_Run_DataIntegrityCheck()
-    Const PROC_NAME As String = "UI_Run_DataIntegrityCheck"
+Public Sub UI_OP_RunDataIntegrityCheck()
+    Const PROC_NAME As String = "UI_OP_RunDataIntegrityCheck"
 
     Dim ok As Boolean
     On Error GoTo EH
@@ -61,7 +61,7 @@ Public Sub UI_Run_DataIntegrityCheck()
     ok = M_Core_DataIntegrity.Validate_DataIntegrity_All(False)
 
     If ok Then
-        If M_Core_UX.ShouldShowSuccessMessage("UI_Run_DataIntegrityCheck") Then
+        If M_Core_UX.ShouldShowSuccessMessage("UI_OP_RunDataIntegrityCheck") Then
             MsgBox "Data Integrity: PASS (0 issues).", vbOKOnly, "Validation"
         End If
         SafeLog PROC_NAME, 0, "PASS", "Data integrity returned True."

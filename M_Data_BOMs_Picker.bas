@@ -97,7 +97,7 @@ Private Const ACTIVE_LABEL As String = "Active"
 ' Public entry points
 '==========================
 
-Public Sub UI_Open_ComponentPicker()
+Public Sub UI_OP_OpenComponentPicker()
     On Error GoTo EH
 
     If Not GateReady_Safe(True) Then GoTo CleanExit
@@ -115,7 +115,7 @@ EH:
 End Sub
 
 ' Optional userform wrapper hook (if a custom UF_ComponentPicker exists).
-Public Sub UI_Open_ComponentPicker_Form_Optional()
+Public Sub UI_OP_OpenComponentPickerFormOptional()
     On Error GoTo Fallback
 
     VBA.UserForms.Add("UF_ComponentPicker").Show
@@ -123,11 +123,11 @@ Public Sub UI_Open_ComponentPicker_Form_Optional()
 
 Fallback:
     Err.Clear
-    UI_Open_ComponentPicker
+    UI_OP_OpenComponentPicker
     MsgBox "UF_ComponentPicker was not found. Opened the sheet-based picker instead.", vbOKOnly, "Component Picker"
 End Sub
 
-Public Sub UI_Refresh_PickerResults()
+Public Sub UI_OP_RefreshPickerResults()
     On Error GoTo EH
 
     If Not GateReady_Safe(True) Then GoTo CleanExit
@@ -144,19 +144,19 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Component Picker"
 End Sub
 
-Public Sub UI_Add_SelectedPickerRows_To_ActiveBOM()
+Public Sub UI_OP_AddSelectedPickerRowsToActiveBOM()
     UI_Add_SelectedPickerRows_ToContext PickerTarget_BOM
 End Sub
 
-Public Sub UI_Add_SelectedPickerRows_To_POLines()
+Public Sub UI_OP_AddSelectedPickerRowsToPOLines()
     UI_Add_SelectedPickerRows_ToContext PickerTarget_PO
 End Sub
 
-Public Sub UI_Add_SelectedPickerRows_To_Inventory()
+Public Sub UI_OP_AddSelectedPickerRowsToInventory()
     UI_Add_SelectedPickerRows_ToContext PickerTarget_INV
 End Sub
 
-Public Sub UI_Add_ComponentByPNRev_To_ActiveBOM()
+Public Sub UI_OP_AddComponentByPNRevToActiveBOM()
     Dim wb As Workbook
     Dim loComps As ListObject
     Dim pn As String
@@ -328,7 +328,7 @@ Private Sub UI_Add_SelectedPickerRows_ToContext(ByVal targetContext As PickerTar
 
             Case vbNo
                 If targetContext = PickerTarget_BOM Then
-                    UI_Add_ComponentByPNRev_To_ActiveBOM
+                    UI_OP_AddComponentByPNRevToActiveBOM
                     Exit Sub
                 End If
 

@@ -3,21 +3,21 @@
 This guide explains the intended end-user workflow and exactly which VBA scripts (macros) to run.
 
 Canonical BOM add entry points are:
-- `UI_Add_SelectedPickerRows_To_ActiveBOM`
-- `UI_Add_ComponentByPNRev_To_ActiveBOM`
+- `UI_OP_AddSelectedPickerRowsToActiveBOM`
+- `UI_OP_AddComponentByPNRevToActiveBOM`
 
 Deprecated compatibility macro (do not map to buttons/automation):
-- `UI_Add_Components_To_BOM` (wrapper that routes into picker module)
+- `DEV_LegacyAddComponentsToBOM` (wrapper that routes into picker module)
 
 ## 1) One-time setup and validation (recommended)
 
 Run these in order before first use (or after schema changes):
 
 1. `RunGateCheck`
-2. `RunDiagnostics`
-3. `UI_RefreshAutomationRegistry`
+2. `DEV_RunDiagnostics`
+3. `DEV_RefreshAutomationRegistry`
 
-Compatibility UI wrappers remain available (`UI_Run_GateCheck`, `UI_Run_HealthCheck`, `UI_Run_AllChecks`) but now route to the canonical check semantics.
+Compatibility UI wrappers remain available (`UI_OP_RunGateCheck`, `DEV_RunHealthCheck`, `UI_OP_RunAllChecks`) but now route to the canonical check semantics.
 
 Why: these checks confirm core schema/platform readiness and refresh registry metadata before user-facing operations.
 
@@ -28,7 +28,7 @@ Note on Gate popups: successful Gate checks are now silent by default; failures 
 ## 2) Open and refresh the picker
 
 ### Default (sheet-based picker)
-1. Run: `UI_Open_ComponentPicker`
+1. Run: `UI_OP_OpenComponentPicker`
 2. This creates/updates `Pickers` and `TBL_PICK_RESULTS` if needed.
 3. Enter filter values in:
    - `B2` search text (description / notes / PN / CompID contains)
@@ -38,10 +38,10 @@ Note on Gate popups: successful Gate checks are now silent by default; failures 
    - `B6` CompID (optional exact match)
    - `B7` Supplier (optional exact match via dropdown)
    - `B8` Description (optional contains or wildcard match, with dropdown suggestions)
-4. Run: `UI_Refresh_PickerResults` after changing filters.
+4. Run: `UI_OP_RefreshPickerResults` after changing filters.
 
 ### Optional UserForm launcher
-- Run: `UI_Open_ComponentPicker_Form_Optional`
+- Run: `UI_OP_OpenComponentPickerFormOptional`
 - If `UF_ComponentPicker` is not present, it automatically falls back to the sheet-based picker.
 
 ---
@@ -53,7 +53,7 @@ Note on Gate popups: successful Gate checks are now silent by default; failures 
 
 ### A) Add to BOM
 1. Navigate to the destination BOM sheet and ensure the BOM table is the first ListObject on that sheet.
-2. Run: `UI_Add_SelectedPickerRows_To_ActiveBOM`
+2. Run: `UI_OP_AddSelectedPickerRowsToActiveBOM`
 3. Enter default quantity when prompted.
 4. Choose quantity mode:
    - **No**: apply default quantity to all selected rows
@@ -64,12 +64,12 @@ Behavior:
 - If PN+Rev is new, a row is inserted.
 
 Fallback option (manual entry):
-- Run: `UI_Add_ComponentByPNRev_To_ActiveBOM`
+- Run: `UI_OP_AddComponentByPNRevToActiveBOM`
 - Enter PN and QtyPer; Rev is optional. If left blank and multiple active revisions exist, you will be prompted to choose one.
 
 ### B) Add to PO Lines
 1. Ensure `POLines!TBL_POLINES` exists and is ready.
-2. Run: `UI_Add_SelectedPickerRows_To_POLines`
+2. Run: `UI_OP_AddSelectedPickerRowsToPOLines`
 3. Enter default quantity and choose quantity mode.
 
 Behavior:
@@ -78,7 +78,7 @@ Behavior:
 
 ### C) Add to Inventory
 1. Ensure `Inv!TBL_INV` exists and is ready.
-2. Run: `UI_Add_SelectedPickerRows_To_Inventory`
+2. Run: `UI_OP_AddSelectedPickerRowsToInventory`
 3. Enter default quantity and choose quantity mode.
 
 Behavior:
@@ -107,18 +107,18 @@ If a check fails, the macro stops with a clear message.
 
 For easier use, assign worksheet buttons:
 
-- **Open Picker** → `UI_Open_ComponentPicker`
-- **Refresh Picker Results** → `UI_Refresh_PickerResults`
-- **Add to BOM (from selected picker rows)** → `UI_Add_SelectedPickerRows_To_ActiveBOM`
-- **Add to BOM (manual PN/Rev fallback)** → `UI_Add_ComponentByPNRev_To_ActiveBOM`
-- **Add to PO Lines** → `UI_Add_SelectedPickerRows_To_POLines`
-- **Add to Inventory** → `UI_Add_SelectedPickerRows_To_Inventory`
+- **Open Picker** → `UI_OP_OpenComponentPicker`
+- **Refresh Picker Results** → `UI_OP_RefreshPickerResults`
+- **Add to BOM (from selected picker rows)** → `UI_OP_AddSelectedPickerRowsToActiveBOM`
+- **Add to BOM (manual PN/Rev fallback)** → `UI_OP_AddComponentByPNRevToActiveBOM`
+- **Add to PO Lines** → `UI_OP_AddSelectedPickerRowsToPOLines`
+- **Add to Inventory** → `UI_OP_AddSelectedPickerRowsToInventory`
 
 Optional:
-- **Open Picker Form (if available)** → `UI_Open_ComponentPicker_Form_Optional`
+- **Open Picker Form (if available)** → `UI_OP_OpenComponentPickerFormOptional`
 
 Avoid mapping legacy compatibility macro:
-- ~~`UI_Add_Components_To_BOM`~~ (deprecated wrapper)
+- ~~`DEV_LegacyAddComponentsToBOM`~~ (deprecated wrapper)
 
 ---
 
@@ -127,12 +127,12 @@ Avoid mapping legacy compatibility macro:
 Run these after changing picker logic:
 
 1. `RunGateCheck`
-2. `RunDiagnostics`
-3. `UI_Run_Comps_Tests`
-4. `UI_Open_ComponentPicker`
-5. `UI_Refresh_PickerResults`
+2. `DEV_RunDiagnostics`
+3. `DEV_RunCompsTests`
+4. `UI_OP_OpenComponentPicker`
+5. `UI_OP_RefreshPickerResults`
 6. One end-to-end add test for each context:
-   - `UI_Add_SelectedPickerRows_To_ActiveBOM`
-   - `UI_Add_SelectedPickerRows_To_POLines`
-   - `UI_Add_SelectedPickerRows_To_Inventory`
+   - `UI_OP_AddSelectedPickerRowsToActiveBOM`
+   - `UI_OP_AddSelectedPickerRowsToPOLines`
+   - `UI_OP_AddSelectedPickerRowsToInventory`
 

@@ -54,8 +54,8 @@ Private Const COMP_ID_PAD As Long = 4
 '==========================
 ' Public entry point
 '==========================
-Public Sub UI_Run_Comps_Tests()
-    Const PROC_NAME As String = "M_Data_Comps_Tests.UI_Run_Comps_Tests"
+Public Sub DEV_RunCompsTests()
+    Const PROC_NAME As String = "M_Data_Comps_Tests.DEV_RunCompsTests"
 
     Dim passCount As Long, failCount As Long
     Dim summary As String

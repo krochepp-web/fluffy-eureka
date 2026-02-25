@@ -412,7 +412,7 @@ Global Note: This workbook will be developed by one developer with the assistanc
 [SemVer in module headers and a small ABOUT cell block. [9](#semver-in-module-headers-and-a-small-about-cell-block.)](#semver-in-module-headers-and-a-small-about-cell-block.)
 
 *Release Lock & Archive Procedure (v3.4.1)  
-For each release, increment the workbook SemVer (Workbook + Doc 050) and freeze the corresponding Schema version. Run UI_Run_HealthCheck and confirm PASS (Schema_Check and Data_Check show zero issues). Run UI_RefreshAutomationRegistry to ensure Auto.TBL_AUTO reflects the current public procedure inventory and flags any removed procedures as STALE. Save the workbook as CUSTOM_TRACKER\_\<version\>.xlsm. Export all VBA modules using Export_All_VBAModules_SaveAsFolder into a versioned folder, and store a copy of Doc 050 in the same folder. Finally, zip the folder (workbook + .bas exports + documentation) to create a rollback snapshot for auditability and recovery.*
+For each release, increment the workbook SemVer (Workbook + Doc 050) and freeze the corresponding Schema version. Run DEV_RunHealthCheck and confirm PASS (Schema_Check and Data_Check show zero issues). Run DEV_RefreshAutomationRegistry to ensure Auto.TBL_AUTO reflects the current public procedure inventory and flags any removed procedures as STALE. Save the workbook as CUSTOM_TRACKER\_\<version\>.xlsm. Export all VBA modules using Export_All_VBAModules_SaveAsFolder into a versioned folder, and store a copy of Doc 050 in the same folder. Finally, zip the folder (workbook + .bas exports + documentation) to create a rollback snapshot for auditability and recovery.*
 
 **  **
 
@@ -660,7 +660,7 @@ M_Core_Toggles – Planned Responsibilities
 
 - Manual/Automatic calc switching
 
-> **Core (M_Core\_\*)**: framework + enforcement (Schema, DataIntegrity, Gate, Lockdown, Logging, Toggles, Utils), contains infrastructure and *no* button entry points except perhaps UI_Run_HealthCheck if you want it “core”
+> **Core (M_Core\_\*)**: framework + enforcement (Schema, DataIntegrity, Gate, Lockdown, Logging, Toggles, Utils), contains infrastructure and *no* button entry points except perhaps DEV_RunHealthCheck if you want it “core”
 >
 > **UI (M_UI\_\*)**: only button-safe entry points (no business logic); **contains only UI\_ procedures**
 >
@@ -899,7 +899,7 @@ Table 1: Current list of modules as of today v3.4.0.
 <td style="text-align: center;">M_Data_Suppliers_Entry</td>
 <td style="text-align: center;">Creates new supplier records with validation</td>
 <td style="text-align: center;">Implemented 3.4.2</td>
-<td style="text-align: center;">UI_New_Supplier</td>
+<td style="text-align: center;">UI_OP_NewSupplier</td>
 </tr>
 <tr>
 <td style="text-align: center;">M_Data_Comps_Entry</td>
@@ -911,7 +911,7 @@ Table 1: Current list of modules as of today v3.4.0.
 <td style="text-align: center;">M_Core_HealthCheck</td>
 <td style="text-align: center;">Runs platform checks (schema + data integrity + gate) and summarizes status</td>
 <td style="text-align: center;">Implemented &amp; Active</td>
-<td style="text-align: center;">UI_Run_HealthCheck</td>
+<td style="text-align: center;">DEV_RunHealthCheck</td>
 </tr>
 <tr>
 <td style="text-align: center;">M_Core_Gate</td>
@@ -977,7 +977,7 @@ Table 1: Current list of modules as of today v3.4.0.
 <td style="text-align: center;">UI_[“To” Worksheet]</td>
 </tr>
 <tr>
-<td style="text-align: center;">Test_Logging</td>
+<td style="text-align: center;">DEV_TestLogging</td>
 <td style="text-align: center;">Logging test harness</td>
 <td style="text-align: center;">Implemented</td>
 <td style="text-align: center;"></td>
@@ -1341,8 +1341,8 @@ Scope: module-level summary of procedures (Subs/Functions) with purpose, inputs,
 
 | **Procedure** | **Purpose** | **Inputs** | **Outputs** | **Assumptions / Notes** |
 |----|----|----|----|----|
-| Lockdown_Apply (Sub) | Apply protection + hide dev artifacts. | Workbook state | Workbook locked down | Passwords/options available; permissions allow. |
-| Lockdown_Remove (Sub) | Remove/relax lockdown for development. | Workbook state | Workbook unlocked | Correct password if used. |
+| DEV_LockdownApply (Sub) | Apply protection + hide dev artifacts. | Workbook state | Workbook locked down | Passwords/options available; permissions allow. |
+| DEV_LockdownRemove (Sub) | Remove/relax lockdown for development. | Workbook state | Workbook unlocked | Correct password if used. |
 | HideDevSheets (Sub) | Hide known dev-only sheets. | Workbook state | Visibility changed | Sheet names match list. |
 | ShowDevSheets (Sub) | Unhide dev sheets. | Workbook state | Visibility changed | Same as above. |
 | ProtectWorkbookStructure (Sub) | Protect workbook structure. | Optional password | Protection enabled | Excel APIs available. |
@@ -1397,7 +1397,7 @@ Scope: module-level summary of procedures (Subs/Functions) with purpose, inputs,
 
 | **Procedure** | **Purpose** | **Inputs** | **Outputs** | **Assumptions / Notes** |
 |----|----|----|----|----|
-| NewSupplier (Sub) | Create a new supplier record (UI-driven). | User inputs/selection (implicit) | New row + audit stamps | Supplier table exists; required cols defined. |
+| SYS_NewSupplier (Sub) | Create a new supplier record (UI-driven). | User inputs/selection (implicit) | New row + audit stamps | Supplier table exists; required cols defined. |
 | EditSupplier (Sub) | Edit an existing supplier record. | Selected supplier row/ID | Updated row | Row resolvable; keys stable. |
 | Supplier_Exists (Function) | Check if supplier exists by key. | supplierKey | Boolean | Key column exists. |
 | GetSupplierTable (Function) | Return supplier ListObject. | None | ListObject | Sheet/table names align with constants. |
@@ -1420,7 +1420,7 @@ Scope: module-level summary of procedures (Subs/Functions) with purpose, inputs,
 | CreateLockdownDiag (Sub) | Create diagnostics sheet/table (ad hoc). | Workbook state | Diagnostic sheet created | Dev-only; structure changes allowed. |
 | Temp_Run (Sub) | Temporary runner for ad-hoc tests. | None | Varies | Dev-only. |
 
-## Test_Logging.bas
+## DEV_TestLogging.bas
 
 | **Procedure** | **Purpose** | **Inputs** | **Outputs** | **Assumptions / Notes** |
 |----|----|----|----|----|

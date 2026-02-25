@@ -38,13 +38,13 @@ Option Explicit
 '===============================================================================
 
 ' Deprecated UI wrapper retained for compatibility.
-Public Sub UI_Run_HealthCheck()
-    RunDiagnostics True
+Public Sub DEV_RunHealthCheck()
+    DEV_RunDiagnostics True
 End Sub
 
 ' Canonical optional comprehensive diagnostics runner.
 ' Includes schema/data execution and summary reporting.
-Public Sub RunDiagnostics(Optional ByVal showUserMessage As Boolean = True)
+Public Sub DEV_RunDiagnostics(Optional ByVal showUserMessage As Boolean = True)
     HealthCheck_RunAll showUserMessage
 End Sub
 

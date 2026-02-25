@@ -2,7 +2,7 @@ Attribute VB_Name = "M_Core_Tests"
 Option Explicit
 '*******************************************************************************
 ' Module:      M_Core_Tests
-' Procedure:   Test_Core_Constants
+' Procedure:   DEV_TestCoreConstants
 '
 ' Purpose:
 '   Validate that constants defined in M_Core_Constants are aligned with the
@@ -45,8 +45,8 @@ Option Explicit
 ' Date:        2025-11-28
 '*******************************************************************************
 
-Public Sub Test_Core_Constants()
-    Const PROC_NAME As String = "Test_Core_Constants"
+Public Sub DEV_TestCoreConstants()
+    Const PROC_NAME As String = "DEV_TestCoreConstants"
     
     Dim wb As Workbook
     Dim wsReport As Worksheet
@@ -176,7 +176,7 @@ EH:
 End Sub
 
 '*******************************************************************************
-' Procedure:   Test_Logging
+' Procedure:   DEV_TestLogging
 '
 ' Purpose:
 '   Smoke-test the logging helpers by writing INFO/WARN/ERROR entries.
@@ -189,8 +189,8 @@ End Sub
 ' Date:        2025-11-28
 '*******************************************************************************
 
-Public Sub Test_Logging()
-    Const PROC_NAME As String = "Test_Logging"
+Public Sub DEV_TestLogging()
+    Const PROC_NAME As String = "DEV_TestLogging"
 
     LogInfo PROC_NAME, "This is an INFO test.", "Detail: nothing special."
     LogWarn PROC_NAME, "This is a WARN test.", "Detail: check thresholds."

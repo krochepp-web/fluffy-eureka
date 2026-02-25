@@ -1,8 +1,8 @@
 Attribute VB_Name = "M_UI_BOM_Navigation"
 Option Explicit
 
-Public Sub UI_GoTo_Selected_BOM_FromBOMS()
-    Const PROC_NAME As String = "M_UI_BOM_Navigation.UI_GoTo_Selected_BOM_FromBOMS"
+Public Sub UI_NAV_GoToSelectedBOMFromBOMS()
+    Const PROC_NAME As String = "M_UI_BOM_Navigation.UI_NAV_GoToSelectedBOMFromBOMS"
     Const SH_BOMS As String = "BOMS"
     Const LO_BOMS As String = "TBL_BOMS"
     Const COL_BOMTAB As String = "BOMTab"

@@ -56,17 +56,17 @@ Option Explicit
 '-----------------------------
 
 ' Macro-dialog / button friendly entry point
-Public Sub UI_RefreshAutomationRegistry()
-    Dev_RefreshAutomationRegistry False, True, True
+Public Sub DEV_RefreshAutomationRegistry()
+    SYS_RefreshAutomationRegistry False, True, True
 End Sub
 
 ' Developer entry point with controls
-Public Sub Dev_RefreshAutomationRegistry( _
+Public Sub SYS_RefreshAutomationRegistry( _
     Optional ByVal dryRun As Boolean = False, _
     Optional ByVal showUserMessage As Boolean = True, _
     Optional ByVal flagStale As Boolean = True)
 
-    Const PROC_NAME As String = "Dev_RefreshAutomationRegistry"
+    Const PROC_NAME As String = "SYS_RefreshAutomationRegistry"
 
     Dim wb As Workbook
     Dim lo As ListObject

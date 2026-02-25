@@ -11,9 +11,9 @@ Option Explicit
 '     - Produce Lockdown_Preview report
 '
 ' Public entry points (Alt+F8):
-'   - Lockdown_DryRun   (no changes; generates preview; NO PASSWORD PROMPT)
-'   - Lockdown_Apply    (enforces protection + hides dev sheets; prompts password)
-'   - Lockdown_Remove   (developer convenience; prompts password)
+'   - DEV_LockdownDryRun   (no changes; generates preview; NO PASSWORD PROMPT)
+'   - DEV_LockdownApply    (enforces protection + hides dev sheets; prompts password)
+'   - DEV_LockdownRemove   (developer convenience; prompts password)
 '
 ' Inputs:
 '   - Sheet: SCHEMA
@@ -39,15 +39,15 @@ Option Explicit
 
 Private gStep As String
 
-Public Sub Lockdown_DryRun()
+Public Sub DEV_LockdownDryRun()
     Lockdown_Run True
 End Sub
 
-Public Sub Lockdown_Apply()
+Public Sub DEV_LockdownApply()
     Lockdown_Run False
 End Sub
 
-Public Sub Lockdown_Remove()
+Public Sub DEV_LockdownRemove()
     Const DEFAULT_PASSWORD As String = "CHANGE_ME"
 
     Dim wb As Workbook
@@ -73,7 +73,7 @@ Public Sub Lockdown_Remove()
     Exit Sub
 
 EH:
-    MsgBox "Lockdown_Remove failed." & vbCrLf & _
+    MsgBox "DEV_LockdownRemove failed." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Lockdown"
 End Sub
 

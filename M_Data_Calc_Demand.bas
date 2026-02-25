@@ -28,13 +28,13 @@ Option Explicit
 
 Private Const MODULE_VERSION As String = "0.1.0"
 
-Public Sub UI_Recalc_Demand_From_WOS_BOM()
-    Const PROC_NAME As String = "M_Data_Calc_Demand.UI_Recalc_Demand_From_WOS_BOM"
+Public Sub UI_OP_RecalcDemandFromWOSBOM()
+    Const PROC_NAME As String = "M_Data_Calc_Demand.UI_OP_RecalcDemandFromWOSBOM"
 
     On Error GoTo EH
 
     If Not M_Core_Gate.Gate_Ready(True) Then Exit Sub
-    Recalc_Demand_From_WOS_BOM M_Core_UX.ShouldShowSuccessMessage("UI_Recalc_Demand_From_WOS_BOM")
+    SYS_RecalcDemandFromWOSBOM M_Core_UX.ShouldShowSuccessMessage("UI_OP_RecalcDemandFromWOSBOM")
     Exit Sub
 
 EH:
@@ -43,8 +43,8 @@ EH:
            "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "Demand"
 End Sub
 
-Public Sub Recalc_Demand_From_WOS_BOM(Optional ByVal showUserMessage As Boolean = True)
-    Const PROC_NAME As String = "M_Data_Calc_Demand.Recalc_Demand_From_WOS_BOM"
+Public Sub SYS_RecalcDemandFromWOSBOM(Optional ByVal showUserMessage As Boolean = True)
+    Const PROC_NAME As String = "M_Data_Calc_Demand.SYS_RecalcDemandFromWOSBOM"
 
     Dim wb As Workbook
     Dim wsBoms As Worksheet, wsWos As Worksheet, wsDemand As Worksheet

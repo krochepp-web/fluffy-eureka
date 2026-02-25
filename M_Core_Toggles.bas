@@ -180,7 +180,7 @@ End Function
 ' Test harness
 '===============================================================================
 
-Public Sub Test_Core_Toggles()
+Public Sub DEV_TestCoreToggles()
     '-------------------------------------------------------------------------
     ' Purpose:
     '   Smoke test for M_Core_Toggles. Demonstrates that:
@@ -191,7 +191,7 @@ Public Sub Test_Core_Toggles()
     '   This is a non-destructive test and is safe to run at any time, but
     '   should not be wired to normal user buttons.
     '-------------------------------------------------------------------------
-    Const PROC_NAME As String = "Test_Core_Toggles"
+    Const PROC_NAME As String = "DEV_TestCoreToggles"
     
     Dim originalScreenUpdating As Boolean
     Dim originalEnableEvents As Boolean
@@ -226,7 +226,7 @@ Public Sub Test_Core_Toggles()
           "  Calculation    = " & CalcModeToString(Application.Calculation)
     Debug.Print msg
     
-    MsgBox "Test_Core_Toggles completed. Check Immediate Window for state snapshots.", _
+    MsgBox "DEV_TestCoreToggles completed. Check Immediate Window for state snapshots.", _
            vbOKOnly, PROC_NAME
     
 CleanExit:
@@ -234,8 +234,8 @@ CleanExit:
     
 EH:
     On Error Resume Next
-    LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in Test_Core_Toggles", Err.Description, Err.Number
-    MsgBox "Error in Test_Core_Toggles." & vbCrLf & _
+    LogEvent PROC_NAME, LOG_LEVEL_ERROR, "Error in DEV_TestCoreToggles", Err.Description, Err.Number
+    MsgBox "Error in DEV_TestCoreToggles." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbOKOnly, PROC_NAME
     Resume CleanExit
 End Sub

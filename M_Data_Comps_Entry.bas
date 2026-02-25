@@ -56,7 +56,7 @@ Option Explicit
 '==========================
 ' PUBLIC ENTRY POINTS
 '==========================
-Public Sub NewComponent()
+Public Sub SYS_NewComponent()
     Dim ignoredCompId As String
     Dim ignoredFailureReason As String
     Call RunNewComponent(ignoredCompId, ignoredFailureReason)

@@ -7,8 +7,8 @@ Option Explicit
 ' Purpose:
 '   Deprecated compatibility wrapper for legacy add-to-BOM macro entry points.
 '   Canonical BOM add flows now live in M_Data_BOMs_Picker:
-'     - UI_Add_SelectedPickerRows_To_ActiveBOM
-'     - UI_Add_ComponentByPNRev_To_ActiveBOM
+'     - UI_OP_AddSelectedPickerRowsToActiveBOM
+'     - UI_OP_AddComponentByPNRevToActiveBOM
 '
 ' Version: v2.0.0
 ' Author: ChatGPT (assistant)
@@ -18,15 +18,15 @@ Option Explicit
 '==========================
 ' PUBLIC COMPAT ENTRY POINT
 '==========================
-Public Sub UI_Add_Components_To_BOM()
+Public Sub DEV_LegacyAddComponentsToBOM()
     On Error GoTo EH
 
-    MsgBox "UI_Add_Components_To_BOM is deprecated." & vbCrLf & _
+    MsgBox "DEV_LegacyAddComponentsToBOM is deprecated." & vbCrLf & _
            "Use picker-based add flows instead." & vbCrLf & vbCrLf & _
-           "Routing to UI_Add_ComponentByPNRev_To_ActiveBOM...", _
+           "Routing to UI_OP_AddComponentByPNRevToActiveBOM...", _
            vbOKOnly, "Add Components to BOM"
 
-    M_Data_BOMs_Picker.UI_Add_ComponentByPNRev_To_ActiveBOM
+    M_Data_BOMs_Picker.UI_OP_AddComponentByPNRevToActiveBOM
     Exit Sub
 
 EH:

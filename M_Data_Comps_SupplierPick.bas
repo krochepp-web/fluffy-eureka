@@ -38,7 +38,7 @@ Option Explicit
 '==========================
 ' PUBLIC TEST HARNESS
 '==========================
-Public Sub Test_SupplierSearch()
+Public Sub DEV_TestSupplierSearch()
     Const SH_SUPPLIERS As String = "Suppliers"
     Const LO_SUPPLIERS As String = "TBL_SUPPLIERS"
 

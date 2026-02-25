@@ -10,7 +10,7 @@ Option Explicit
 '
 ' Inputs:
 '   - Gate: M_Core_Gate.Gate_Ready
-'   - Worker: M_Data_Comps_Entry.NewComponent
+'   - Worker: M_Data_Comps_Entry.SYS_NewComponent
 '
 ' Outputs / Side effects:
 '   - Creates a new component record
@@ -22,8 +22,8 @@ Option Explicit
 
 Private Const MODULE_VERSION As String = "3.5.4"
 
-Public Sub UI_New_Component()
-    Const PROC_NAME As String = "M_UI_Comps.UI_New_Component"
+Public Sub UI_OP_NewComponent()
+    Const PROC_NAME As String = "M_UI_Comps.UI_OP_NewComponent"
 
     On Error GoTo EH
 
@@ -52,9 +52,9 @@ Public Sub UI_New_Component()
     Exit Sub
 
 EH:
-    M_Core_Logging.LogError PROC_NAME, "UI_New_Component failed", "Err " & Err.Number & ": " & Err.Description, Err.Number
+    M_Core_Logging.LogError PROC_NAME, "UI_OP_NewComponent failed", "Err " & Err.Number & ": " & Err.Description, Err.Number
     GoToLogSheet
-    MsgBox "UI_New_Component failed." & vbCrLf & _
+    MsgBox "UI_OP_NewComponent failed." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description & vbCrLf & _
            "See Log sheet for details.", vbOKOnly, "New Component"
 End Sub

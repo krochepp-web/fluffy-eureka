@@ -25,7 +25,7 @@ Sub UI_GoToWOS()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToBOMS()
+Sub UI_NAV_GoToBOMS()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
     Worksheets("BOMS").Activate
@@ -39,7 +39,7 @@ Sub UI_GoToBOMS()
 End Sub
 
 
-Sub UI_GoToLOG()
+Sub UI_NAV_GoToLOG()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
     Worksheets("LOG").Activate
@@ -52,7 +52,7 @@ Sub UI_GoToLOG()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToBOM_TEMPLATE()
+Sub UI_NAV_GoToBOM_TEMPLATE()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
     Worksheets("BOM_TEMPLATE").Activate
@@ -65,7 +65,7 @@ Sub UI_GoToBOM_TEMPLATE()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToUsers()
+Sub UI_NAV_GoToUsers()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
     Worksheets("Users").Activate
@@ -78,7 +78,7 @@ Sub UI_GoToUsers()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToData_Check()
+Sub UI_NAV_GoToData_Check()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
     Worksheets("Data_Check").Activate
@@ -92,7 +92,7 @@ Sub UI_GoToData_Check()
 End Sub
 
 
-Sub UI_GoToSheetLanding()
+Sub UI_NAV_GoToSheetLanding()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
       Worksheets("Landing").Activate
@@ -105,7 +105,7 @@ Sub UI_GoToSheetLanding()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetSchema_Check()
+Sub UI_NAV_GoToSheetSchema_Check()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
     Worksheets("Schema_Check").Activate
@@ -118,7 +118,7 @@ Sub UI_GoToSheetSchema_Check()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetSCHEMA()
+Sub UI_NAV_GoToSheetSCHEMA()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
     Worksheets("SCHEMA").Activate
@@ -131,7 +131,7 @@ Sub UI_GoToSheetSCHEMA()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetCore_Tests()
+Sub UI_NAV_GoToSheetCore_Tests()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
     Worksheets("Core_Tests").Activate
@@ -144,7 +144,7 @@ Sub UI_GoToSheetCore_Tests()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetWorkbook_Schema()
+Sub UI_NAV_GoToSheetWorkbook_Schema()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
     Worksheets("Workbook_Schema").Activate
@@ -158,7 +158,7 @@ Sub UI_GoToSheetWorkbook_Schema()
 End Sub
 
 
-Sub UI_GoToSheetAUTO()
+Sub UI_NAV_GoToSheetAUTO()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
       Worksheets("AUTO").Activate
@@ -171,7 +171,7 @@ Sub UI_GoToSheetAUTO()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetSuppliers()
+Sub UI_NAV_GoToSheetSuppliers()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
       Worksheets("Suppliers").Activate
@@ -184,7 +184,7 @@ Sub UI_GoToSheetSuppliers()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetComps()
+Sub UI_NAV_GoToSheetComps()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
       Worksheets("Comps").Activate
@@ -197,7 +197,7 @@ Sub UI_GoToSheetComps()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetRHistory()
+Sub UI_NAV_GoToSheetRHistory()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
       Worksheets("RHistory").Activate
@@ -210,7 +210,7 @@ Sub UI_GoToSheetRHistory()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetHelpers()
+Sub UI_NAV_GoToSheetHelpers()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
       Worksheets("Helpers").Activate
@@ -223,7 +223,7 @@ Sub UI_GoToSheetHelpers()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetDev_ModuleCatalog()
+Sub UI_NAV_GoToSheetDev_ModuleCatalog()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
       Worksheets("Dev_ModuleCatalog").Activate
@@ -236,7 +236,7 @@ Sub UI_GoToSheetDev_ModuleCatalog()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheetLockdown_Preview()
+Sub UI_NAV_GoToSheetLockdown_Preview()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
       Worksheets("Lockdown_Preview").Activate
@@ -249,7 +249,7 @@ Sub UI_GoToSheetLockdown_Preview()
     ' Range("A1").Select
 End Sub
 
-Sub UI_GoToSheeDev_ProcedureCatalog()
+Sub UI_NAV_GoToSheetDev_ProcedureCatalog()
     ' Replace "YourSheetName" with the actual name of the worksheet tab
     ' For example: Worksheets("Data").Activate
       Worksheets("Dev_ProcedureCatalog").Activate
