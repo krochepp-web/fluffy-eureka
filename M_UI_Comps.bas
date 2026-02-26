@@ -42,6 +42,7 @@ Public Sub UI_OP_NewComponent()
     createdOk = M_Data_Comps_Entry.NewComponent_Create(attemptedCompId, failureReason)
 
     If createdOk Then
+        FocusCompsAndSortNewest
         M_Core_Logging.LogInfo PROC_NAME, "End: New Component", _
             "Result=SUCCESS; CompID=" & attemptedCompId & "; ModuleVersion=" & MODULE_VERSION
     Else

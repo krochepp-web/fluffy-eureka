@@ -38,6 +38,7 @@ Public Sub UI_OP_NewSupplier()
     M_Core_Logging.LogInfo PROC_NAME, "Start: New Supplier"
 
     M_Data_Suppliers_Entry.SYS_NewSupplier
+    FocusSuppliersAndSortNewest
 
     M_Core_Logging.LogInfo PROC_NAME, "Success: New Supplier"
 
