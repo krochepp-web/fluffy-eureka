@@ -289,6 +289,13 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
 
     SetByHeader loComps, lr, "IsBuildable", buildable
 
+    Dim missingRequired As String
+    missingRequired = EnsureRequiredFieldsFilled_Comps(loComps, lr, "Comps", "TBL_COMPS")
+    If Len(missingRequired) > 0 Then
+        abortedReason = "Missing required field(s) after defaults: " & missingRequired
+        GoTo FailRollback
+    End If
+
     If Not M_Core_DataIntegrity.RunDataCheck(False) Then
         abortedReason = "Schema/data integrity requirements failed after component entry. " & DataCheckSummary()
         M_Core_Logging.LogWarn PROC_NAME, "Data integrity failed after component entry", _
@@ -325,13 +332,101 @@ Aborted:
     Exit Function
 
 EH:
+    Dim errNum As Long
+    Dim errDesc As String
+
+    errNum = Err.Number
+    errDesc = Err.Description
+
     On Error Resume Next
     If Not lr Is Nothing Then lr.Delete
     On Error GoTo 0
-    failureReason = "Error " & CStr(Err.Number) & ": " & Err.Description
+
+    failureReason = "Error " & CStr(errNum) & ": " & errDesc
     GoToLogSheet
     MsgBox "No new component created." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "New Component"
+           "Error " & errNum & ": " & errDesc, vbOKOnly, "New Component"
+End Function
+
+Private Function EnsureRequiredFieldsFilled_Comps(ByVal lo As ListObject, ByVal lr As ListRow, ByVal tabName As String, ByVal tableName As String) As String
+    Const SCHEMA_TABLE As String = "TBL_SCHEMA"
+    Const H_TAB As String = "TAB_NAME"
+    Const H_TBL As String = "TABLE_NAME"
+    Const H_COL As String = "COLUMN_HEADER"
+    Const H_REQ As String = "IsRequired"
+    Const H_DEF As String = "DefaultValue"
+
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim loSchema As ListObject
+    Dim idxTab As Long, idxTbl As Long, idxCol As Long, idxReq As Long, idxDef As Long
+    Dim arr As Variant
+    Dim r As Long
+    Dim missingList As String
+
+    Set wb = ThisWorkbook
+
+    For Each ws In wb.Worksheets
+        On Error Resume Next
+        Set loSchema = ws.ListObjects(SCHEMA_TABLE)
+        On Error GoTo 0
+        If Not loSchema Is Nothing Then Exit For
+    Next ws
+    If loSchema Is Nothing Then Exit Function
+    If loSchema.DataBodyRange Is Nothing Then Exit Function
+
+    idxTab = GetColIndex(loSchema, H_TAB)
+    idxTbl = GetColIndex(loSchema, H_TBL)
+    idxCol = GetColIndex(loSchema, H_COL)
+    idxReq = GetColIndex(loSchema, H_REQ)
+    idxDef = GetColIndex(loSchema, H_DEF)
+    If idxTab = 0 Or idxTbl = 0 Or idxCol = 0 Or idxReq = 0 Then Exit Function
+
+    arr = loSchema.DataBodyRange.Value
+    For r = 1 To UBound(arr, 1)
+        Dim schemaTab As String, schemaTbl As String, colH As String
+        schemaTab = Trim$(CStr(arr(r, idxTab)))
+        schemaTbl = Trim$(CStr(arr(r, idxTbl)))
+        colH = Trim$(CStr(arr(r, idxCol)))
+
+        If StrComp(schemaTab, tabName, vbTextCompare) = 0 _
+           And StrComp(schemaTbl, tableName, vbTextCompare) = 0 _
+           And Len(colH) > 0 Then
+
+            If IsTrueish_Comps(arr(r, idxReq)) And ColumnExists(lo, colH) Then
+                If CellIsBlankish_Comps(lr.Range.Cells(1, GetColIndex(lo, colH)).Value) Then
+                    Dim defVal As String
+                    If idxDef > 0 Then defVal = Trim$(CStr(arr(r, idxDef)))
+                    If Len(defVal) > 0 Then
+                        SetByHeader lo, lr, colH, defVal
+                    End If
+                End If
+
+                If CellIsBlankish_Comps(lr.Range.Cells(1, GetColIndex(lo, colH)).Value) Then
+                    If Len(missingList) > 0 Then missingList = missingList & ", "
+                    missingList = missingList & colH
+                End If
+            End If
+        End If
+    Next r
+
+    EnsureRequiredFieldsFilled_Comps = missingList
+End Function
+
+Private Function IsTrueish_Comps(ByVal v As Variant) As Boolean
+    Dim s As String
+    s = UCase$(Trim$(CStr(v)))
+    IsTrueish_Comps = (s = "Y" Or s = "YES" Or s = "TRUE" Or s = "1")
+End Function
+
+Private Function CellIsBlankish_Comps(ByVal v As Variant) As Boolean
+    If IsError(v) Then
+        CellIsBlankish_Comps = True
+    ElseIf IsNull(v) Or IsEmpty(v) Then
+        CellIsBlankish_Comps = True
+    Else
+        CellIsBlankish_Comps = (Len(Trim$(CStr(v))) = 0)
+    End If
 End Function
 
 '==========================
