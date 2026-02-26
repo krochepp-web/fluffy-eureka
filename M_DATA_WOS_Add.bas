@@ -185,7 +185,7 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
     If ColumnExists(loWos, "BuildNotes") Then SetByHeader loWos, lr, "BuildNotes", buildNotes
 
     Dim missingRequired As String
-    missingRequired = EnsureRequiredFieldsFilled(loWos, lr, SH_WOS, TBL_WOS)
+    missingRequired = EnsureRequiredFieldsFilled_WOS(loWos, lr, SH_WOS, TBL_WOS)
     If Len(missingRequired) > 0 Then
         If Not lr Is Nothing Then lr.Delete
         Err.Raise vbObjectError + 7007, PROC_NAME, "Missing required field(s) after defaults: " & missingRequired
@@ -447,7 +447,7 @@ Private Function GetSchemaDefaultValue(ByVal tabName As String, ByVal tableName 
     Next r
 End Function
 
-Private Function EnsureRequiredFieldsFilled(ByVal lo As ListObject, ByVal lr As ListRow, ByVal tabName As String, ByVal tableName As String) As String
+Private Function EnsureRequiredFieldsFilled_WOS(ByVal lo As ListObject, ByVal lr As ListRow, ByVal tabName As String, ByVal tableName As String) As String
     Const SCHEMA_TABLE As String = "TBL_SCHEMA"
     Const H_TAB As String = "TAB_NAME"
     Const H_TBL As String = "TABLE_NAME"
@@ -492,8 +492,8 @@ Private Function EnsureRequiredFieldsFilled(ByVal lo As ListObject, ByVal lr As 
            And StrComp(schemaTbl, tableName, vbTextCompare) = 0 _
            And Len(colH) > 0 Then
 
-            If IsTrueish(arr(r, idxReq)) And ColumnExists(lo, colH) Then
-                If CellIsBlankish(lr.Range.Cells(1, GetColIndex(lo, colH)).Value) Then
+            If IsTrueish_WOS(arr(r, idxReq)) And ColumnExists(lo, colH) Then
+                If CellIsBlankish_WOS(lr.Range.Cells(1, GetColIndex(lo, colH)).Value) Then
                     Dim defVal As String
                     If idxDef > 0 Then defVal = Trim$(CStr(arr(r, idxDef)))
                     If Len(defVal) > 0 Then
@@ -501,7 +501,7 @@ Private Function EnsureRequiredFieldsFilled(ByVal lo As ListObject, ByVal lr As 
                     End If
                 End If
 
-                If CellIsBlankish(lr.Range.Cells(1, GetColIndex(lo, colH)).Value) Then
+                If CellIsBlankish_WOS(lr.Range.Cells(1, GetColIndex(lo, colH)).Value) Then
                     If Len(missingList) > 0 Then missingList = missingList & ", "
                     missingList = missingList & colH
                 End If
@@ -509,22 +509,22 @@ Private Function EnsureRequiredFieldsFilled(ByVal lo As ListObject, ByVal lr As 
         End If
     Next r
 
-    EnsureRequiredFieldsFilled = missingList
+    EnsureRequiredFieldsFilled_WOS = missingList
 End Function
 
-Private Function IsTrueish(ByVal v As Variant) As Boolean
+Private Function IsTrueish_WOS(ByVal v As Variant) As Boolean
     Dim s As String
     s = UCase$(Trim$(CStr(v)))
-    IsTrueish = (s = "Y" Or s = "YES" Or s = "TRUE" Or s = "1")
+    IsTrueish_WOS = (s = "Y" Or s = "YES" Or s = "TRUE" Or s = "1")
 End Function
 
-Private Function CellIsBlankish(ByVal v As Variant) As Boolean
+Private Function CellIsBlankish_WOS(ByVal v As Variant) As Boolean
     If IsError(v) Then
-        CellIsBlankish = True
+        CellIsBlankish_WOS = True
     ElseIf IsNull(v) Or IsEmpty(v) Then
-        CellIsBlankish = True
+        CellIsBlankish_WOS = True
     Else
-        CellIsBlankish = (Len(Trim$(CStr(v))) = 0)
+        CellIsBlankish_WOS = (Len(Trim$(CStr(v))) = 0)
     End If
 End Function
 
