@@ -260,7 +260,6 @@ wsNew.Range("C1").Value = taId
 wsNew.Range("C2").Value = taPn
 wsNew.Range("C3").Value = taRev
 wsNew.Range("C4").Value = taDesc
-wsNew.Range("C5").Value = bomId
 
     ' Register in BOMS table
 Dim lr As ListRow
