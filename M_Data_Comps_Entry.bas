@@ -48,9 +48,9 @@ Option Explicit
 ' Errors & Guards:
 '   - Fails fast on missing tables/headers/named ranges with clear messages
 '
-' Version: v3.6.2
+' Version: v3.6.3
 ' Author: Keith + GPT
-' Date: 2025-12-30
+' Date: 2026-02-27
 '===============================================================================
 
 '==========================
@@ -159,6 +159,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     ' fallback to direct text entry with defaults when needed.
 
     ' IMS default: attempt schema lookup; fallback if blank
+    currentStep = "Resolving IMSStatus default"
     imsDefault = GetSchemaDefaultValue("Comps", "TBL_COMPS", "IMSStatus")
     imsDefault = Trim$(imsDefault)
     If Len(imsDefault) = 0 Then imsDefault = DEFAULT_IMSSTATUS_FALLBACK
@@ -171,6 +172,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     If ValueExistsInColumn(loComps, "CompID", compId) Then Err.Raise vbObjectError + 5101, PROC_NAME, "Generated CompID already exists: " & compId
 
     ' Create row now; rollback on cancel/error
+    currentStep = "Creating draft component row"
     Set lr = loComps.ListRows.Add
     SetByHeader loComps, lr, "CompID", compId
 
@@ -278,6 +280,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     ' Optional: ComponentLT
     If ColumnExists(loComps, "ComponentLT") Then
         Dim ltVal As Long
+        currentStep = "Collecting ComponentLT"
         ltVal = Prompt_Long("Enter ComponentLT (days).", "New Component (" & compId & ")", CLng(val(CStr(pickDfltLT))), 0, 3650)
         If ltVal = -1 Then
             abortedReason = "ComponentLT not provided."
@@ -320,6 +323,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
 
     createdOk = True
     RunNewComponent = True
+    currentStep = "Completed"
     If M_Core_UX.ShouldShowSuccessMessage("RunNewComponent") Then
         MsgBox "Component created: " & compId & vbCrLf & _
                "Supplier: " & pickName & " [" & pickId & "]" & vbCrLf & _
@@ -330,16 +334,24 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
 FailRollback:
     On Error Resume Next
     If Not lr Is Nothing Then lr.Delete
+    If Err.Number <> 0 Then
+        M_Core_Logging.LogWarn PROC_NAME, "Rollback warning", _
+            "CompID=" & compId & "; Step=" & currentStep & "; DeleteErr=" & Err.Number & ": " & Err.Description
+        Err.Clear
+    End If
     On Error GoTo 0
     GoTo Aborted
 
 Aborted:
     If Not createdOk Then
         failureReason = Trim$(abortedReason)
-        If Len(failureReason) = 0 Then failureReason = "Creation cancelled before save."
+        If Len(failureReason) = 0 Then
+            failureReason = "Creation cancelled before save. Step=" & currentStep
+            If Len(Trim$(compId)) > 0 Then failureReason = failureReason & "; CompID=" & compId
+        End If
 
         M_Core_Logging.LogWarn PROC_NAME, "Component creation aborted", _
-            "CompID=" & compId & "; Reason=" & failureReason
+            "CompID=" & compId & "; Step=" & currentStep & "; Reason=" & failureReason
 
         If Len(Trim$(abortedReason)) > 0 Then
             MsgBox "No new component created." & vbCrLf & "Reason: " & abortedReason, vbOKOnly, "New Component"
