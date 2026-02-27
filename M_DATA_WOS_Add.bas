@@ -51,7 +51,7 @@ Public Sub UI_OP_AddWOSBuild()
 
     On Error GoTo EH
 
-    FocusWosSheet
+    FocusTopAssembliesSheet
 
     If Not Gate_Ready(True) Then Exit Sub
 
@@ -129,13 +129,15 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
     Dim buildId As String
     Dim nowStamp As Date
     Dim actor As String
+    Dim currentStep As String
 
     On Error GoTo EH
 
-    FocusWosSheet
+    FocusTopAssembliesSheet
 
     If Not Gate_Ready(True) Then Exit Sub
 
+    currentStep = "Validate inputs"
     assemblyId = Trim$(assemblyId)
     destination = Trim$(destination)
     buildName = Trim$(buildName)
@@ -146,6 +148,7 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
     If buildQty <= 0 Then Err.Raise vbObjectError + 7002, PROC_NAME, "BuildQuantity must be > 0."
     If Len(destination) = 0 Then Err.Raise vbObjectError + 7003, PROC_NAME, "ShipTo is required."
 
+    currentStep = "Resolve WOS table"
     Set wb = ThisWorkbook
     Set wsWos = wb.Worksheets(SH_WOS)
     Set loWos = wsWos.ListObjects(TBL_WOS)
@@ -157,10 +160,12 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
 
     dueDateCol = ResolveDueDateColumn(loWos)
 
+    currentStep = "Validate assembly exists"
     If Not AssemblyExistsInWorkbook(wb, assemblyId) Then
         Err.Raise vbObjectError + 7004, PROC_NAME, "AssemblyID '" & assemblyId & "' was not found in BOMS.TAID or Comps.CompID."
     End If
 
+    currentStep = "Generate BuildID"
     buildId = GenerateNextBuildId(loWos)
     If Len(buildId) = 0 Then Err.Raise vbObjectError + 7005, PROC_NAME, "Could not generate BuildID."
 
@@ -168,6 +173,7 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
         buildName = assemblyId & "_" & Format$(dueDate, "yyyymmdd")
     End If
 
+    currentStep = "Insert WOS row"
     Set lr = loWos.ListRows.Add
 
     SetByHeader loWos, lr, "BuildID", buildId
@@ -184,6 +190,7 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
     If ColumnExists(loWos, "BuildStatus") Then SetByHeader loWos, lr, "BuildStatus", BUILD_STATUS_PLANNED
     If ColumnExists(loWos, "BuildNotes") Then SetByHeader loWos, lr, "BuildNotes", buildNotes
 
+    currentStep = "Validate required fields"
     Dim missingRequired As String
     missingRequired = EnsureRequiredFieldsFilled(loWos, lr, SH_WOS, TBL_WOS)
     If Len(missingRequired) > 0 Then
@@ -191,13 +198,15 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
         Err.Raise vbObjectError + 7007, PROC_NAME, "Missing required field(s) after defaults: " & missingRequired
     End If
 
+    currentStep = "Stamp audit"
     nowStamp = Now
     actor = SafeActorName()
     StampAuditIfPresent loWos, lr, actor, nowStamp
 
+    currentStep = "Run DataCheck"
     If Not M_Core_DataIntegrity.RunDataCheck(False) Then
         If Not lr Is Nothing Then lr.Delete
-        Err.Raise vbObjectError + 7006, PROC_NAME, "Schema/data integrity requirements failed after build creation."
+        Err.Raise vbObjectError + 7006, PROC_NAME, "Schema/data integrity requirements failed after build creation. " & DataCheckSummary()
     End If
 
     M_Core_Logging.LogInfo PROC_NAME, "Created WOS build", _
@@ -212,7 +221,10 @@ Public Sub SYS_AddWOSBuildFromInputs(ByVal assemblyId As String, ByVal dueDate A
     Exit Sub
 
 EH:
-    M_Core_Logging.LogError PROC_NAME, "Create WOS build failed", Err.Description, Err.Number
+    M_Core_Logging.LogError PROC_NAME, "Create WOS build failed", _
+        "Step=" & currentStep & "; AssemblyID=" & assemblyId & "; BuildQty=" & CStr(buildQty) & _
+        "; Destination=" & destination & "; DeliveryMethod=" & deliveryMethod & _
+        "; Err=" & Err.Description, Err.Number
     GoToLogSheet
     M_Core_UX.ShowFailureMessageWithLogFocus PROC_NAME, "New Build", "Create build failed.", Err.Description, Err.Number
 End Sub
@@ -610,8 +622,39 @@ Private Sub FocusWosSheet()
     On Error GoTo 0
 End Sub
 
+Private Sub FocusTopAssembliesSheet()
+    On Error Resume Next
+    ThisWorkbook.Worksheets(SH_BOMS).Activate
+    On Error GoTo 0
+End Sub
+
 Private Sub GoToLogSheet()
     On Error Resume Next
     ThisWorkbook.Worksheets("Log").Activate
     On Error GoTo 0
 End Sub
+
+Private Function DataCheckSummary() As String
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim r As Long
+    Dim detail As String
+
+    On Error GoTo Fallback
+    Set ws = ThisWorkbook.Worksheets("Data_Check")
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    If lastRow < 2 Then GoTo Fallback
+
+    For r = 2 To lastRow
+        If Len(Trim$(CStr(ws.Cells(r, 1).Value))) > 0 Then
+            detail = CStr(ws.Cells(r, 1).Value)
+            If Len(Trim$(CStr(ws.Cells(r, 2).Value))) > 0 Then detail = detail & " | " & CStr(ws.Cells(r, 2).Value)
+            If Len(Trim$(CStr(ws.Cells(r, 5).Value))) > 0 Then detail = detail & " | " & CStr(ws.Cells(r, 5).Value)
+            DataCheckSummary = detail
+            Exit Function
+        End If
+    Next r
+
+Fallback:
+    DataCheckSummary = "See Data_Check tab for failed rule details."
+End Function

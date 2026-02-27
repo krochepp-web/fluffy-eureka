@@ -323,6 +323,9 @@ Aborted:
         failureReason = Trim$(abortedReason)
         If Len(failureReason) = 0 Then failureReason = "Creation cancelled before save."
 
+        M_Core_Logging.LogWarn PROC_NAME, "Component creation aborted", _
+            "CompID=" & compId & "; Reason=" & failureReason
+
         If Len(Trim$(abortedReason)) > 0 Then
             MsgBox "No new component created." & vbCrLf & "Reason: " & abortedReason, vbOKOnly, "New Component"
         Else
@@ -336,6 +339,8 @@ EH:
     If Not lr Is Nothing Then lr.Delete
     On Error GoTo 0
     failureReason = "Error " & CStr(Err.Number) & ": " & Err.Description
+    M_Core_Logging.LogError PROC_NAME, "Component creation failed", _
+        "CompID=" & compId & "; " & failureReason, Err.Number
     GoToLogSheet
     MsgBox "No new component created." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "New Component"
