@@ -48,9 +48,9 @@ Option Explicit
 ' Errors & Guards:
 '   - Fails fast on missing tables/headers/named ranges with clear messages
 '
-' Version: v3.6.2
+' Version: v3.6.3
 ' Author: Keith + GPT
-' Date: 2025-12-30
+' Date: 2026-02-27
 '===============================================================================
 
 '==========================
@@ -104,9 +104,11 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
 
     Dim createdOk As Boolean
     Dim abortedReason As String
+    Dim currentStep As String
 
     createdOk = False
     abortedReason = vbNullString
+    currentStep = "Initializing"
     attemptedCompId = vbNullString
     failureReason = vbNullString
     RunNewComponent = False
@@ -116,6 +118,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     '-----------------------------
     ' Gate check (consistency)
     '-----------------------------
+    currentStep = "Gate readiness check"
     If Not GateReady_Safe(False) Then
         abortedReason = "Gate not ready."
         GoTo Aborted
@@ -156,17 +159,20 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     ' fallback to direct text entry with defaults when needed.
 
     ' IMS default: attempt schema lookup; fallback if blank
+    currentStep = "Resolving IMSStatus default"
     imsDefault = GetSchemaDefaultValue("Comps", "TBL_COMPS", "IMSStatus")
     imsDefault = Trim$(imsDefault)
     If Len(imsDefault) = 0 Then imsDefault = DEFAULT_IMSSTATUS_FALLBACK
 
     ' Generate CompID
+    currentStep = "Generating CompID"
     compId = GenerateNextId(loComps, "CompID", COMP_ID_PREFIX, COMP_ID_PAD)
     If Len(compId) = 0 Then Err.Raise vbObjectError + 5100, PROC_NAME, "Failed to generate CompID."
     attemptedCompId = compId
     If ValueExistsInColumn(loComps, "CompID", compId) Then Err.Raise vbObjectError + 5101, PROC_NAME, "Generated CompID already exists: " & compId
 
     ' Create row now; rollback on cancel/error
+    currentStep = "Creating draft component row"
     Set lr = loComps.ListRows.Add
     SetByHeader loComps, lr, "CompID", compId
 
@@ -180,12 +186,14 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "UpdatedBy", createdBy
 
     ' Required: OurPN / OurRev
+    currentStep = "Collecting OurPN"
     ourPN = Trim$(InputBox("Enter OurPN (required).", "New Component (" & compId & ")"))
     If Len(ourPN) = 0 Then
         abortedReason = "OurPN not provided."
         GoTo FailRollback
     End If
 
+    currentStep = "Collecting OurRev"
     ourRev = Trim$(InputBox("Enter OurRev (required).", "New Component (" & compId & ")"))
     If Len(ourRev) = 0 Then
         abortedReason = "OurRev not provided."
@@ -205,6 +213,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "OurRev", ourRev
 
     ' Required: ComponentDescription
+    currentStep = "Collecting ComponentDescription"
     desc = Prompt_RequiredText("Enter ComponentDescription (required).", "New Component (" & compId & ")", DEFAULT_DESC)
     If Len(desc) = 0 Then
         abortedReason = "ComponentDescription not provided."
@@ -213,6 +222,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "ComponentDescription", desc
 
     ' Supplier selection (forced)
+    currentStep = "Selecting supplier"
     If Not SupplierPick_ByName(loSupp, pickId, pickName, pickDfltLT) Then
         abortedReason = "Supplier selection cancelled."
         GoTo FailRollback
@@ -226,6 +236,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
 
     ' Required list fields
+    currentStep = "Selecting UOM"
     uom = Prompt_ListValue("NR_UOM", "Select UOM (required).", "New Component (" & compId & ")", DEFAULT_UOM)
     If Len(uom) = 0 Then
         abortedReason = "UOM not selected."
@@ -233,6 +244,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
     SetByHeader loComps, lr, "UOM", uom
 
+    currentStep = "Selecting RevStatus"
     revStatus = Prompt_ListValue("NR_RevStatus", "Select RevStatus (required).", "New Component (" & compId & ")", DEFAULT_REVSTATUS)
     If Len(revStatus) = 0 Then
         abortedReason = "RevStatus not selected."
@@ -240,6 +252,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
     SetByHeader loComps, lr, "RevStatus", revStatus
 
+    currentStep = "Selecting IMSStatus"
     imsStatus = Prompt_ListValue("NR_IMSStatus", "Select IMSStatus (required).", "New Component (" & compId & ")", imsDefault)
     If Len(imsStatus) = 0 Then
         abortedReason = "IMSStatus not selected."
@@ -248,6 +261,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "IMSStatus", imsStatus
 
     ' Required numeric fields
+    currentStep = "Collecting MOQ1"
     moq1 = Prompt_Long("Enter MOQ1 (required).", "New Component (" & compId & ")", DEFAULT_MOQ1, 1, 1000000)
     If moq1 = -1 Then
         abortedReason = "MOQ1 not provided."
@@ -255,6 +269,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
     SetByHeader loComps, lr, "MOQ1", moq1
 
+    currentStep = "Collecting CostPerUOMMOQ1"
     costMOQ1 = Prompt_Double("Enter CostPerUOMMOQ1 (required).", "New Component (" & compId & ")", DEFAULT_COST_MOQ1, 0, 1000000000#)
     If costMOQ1 < 0 Then
         abortedReason = "CostPerUOMMOQ1 not provided."
@@ -265,6 +280,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     ' Optional: ComponentLT
     If ColumnExists(loComps, "ComponentLT") Then
         Dim ltVal As Long
+        currentStep = "Collecting ComponentLT"
         ltVal = Prompt_Long("Enter ComponentLT (days).", "New Component (" & compId & ")", CLng(val(CStr(pickDfltLT))), 0, 3650)
         If ltVal = -1 Then
             abortedReason = "ComponentLT not provided."
@@ -290,12 +306,14 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "IsBuildable", buildable
 
     Dim missingRequired As String
+    currentStep = "Verifying required fields"
     missingRequired = EnsureRequiredFieldsFilled(loComps, lr, "Comps", "TBL_COMPS")
     If Len(missingRequired) > 0 Then
         abortedReason = "Missing required field(s) after defaults: " & missingRequired
         GoTo FailRollback
     End If
 
+    currentStep = "Running data integrity checks"
     If Not M_Core_DataIntegrity.RunDataCheck(False) Then
         abortedReason = "Schema/data integrity requirements failed after component entry. " & DataCheckSummary()
         M_Core_Logging.LogWarn PROC_NAME, "Data integrity failed after component entry", _
@@ -305,6 +323,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
 
     createdOk = True
     RunNewComponent = True
+    currentStep = "Completed"
     If M_Core_UX.ShouldShowSuccessMessage("RunNewComponent") Then
         MsgBox "Component created: " & compId & vbCrLf & _
                "Supplier: " & pickName & " [" & pickId & "]" & vbCrLf & _
@@ -315,16 +334,24 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
 FailRollback:
     On Error Resume Next
     If Not lr Is Nothing Then lr.Delete
+    If Err.Number <> 0 Then
+        M_Core_Logging.LogWarn PROC_NAME, "Rollback warning", _
+            "CompID=" & compId & "; Step=" & currentStep & "; DeleteErr=" & Err.Number & ": " & Err.Description
+        Err.Clear
+    End If
     On Error GoTo 0
     GoTo Aborted
 
 Aborted:
     If Not createdOk Then
         failureReason = Trim$(abortedReason)
-        If Len(failureReason) = 0 Then failureReason = "Creation cancelled before save."
+        If Len(failureReason) = 0 Then
+            failureReason = "Creation cancelled before save. Step=" & currentStep
+            If Len(Trim$(compId)) > 0 Then failureReason = failureReason & "; CompID=" & compId
+        End If
 
         M_Core_Logging.LogWarn PROC_NAME, "Component creation aborted", _
-            "CompID=" & compId & "; Reason=" & failureReason
+            "CompID=" & compId & "; Step=" & currentStep & "; Reason=" & failureReason
 
         If Len(Trim$(abortedReason)) > 0 Then
             MsgBox "No new component created." & vbCrLf & "Reason: " & abortedReason, vbOKOnly, "New Component"
@@ -340,7 +367,7 @@ EH:
     On Error GoTo 0
     failureReason = "Error " & CStr(Err.Number) & ": " & Err.Description
     M_Core_Logging.LogError PROC_NAME, "Component creation failed", _
-        "CompID=" & compId & "; " & failureReason, Err.Number
+        "CompID=" & compId & "; Step=" & currentStep & "; " & failureReason, Err.Number
     GoToLogSheet
     MsgBox "No new component created." & vbCrLf & _
            "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "New Component"
