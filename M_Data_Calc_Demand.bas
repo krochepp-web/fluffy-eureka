@@ -122,32 +122,27 @@ Private Sub BuildBomLookup(ByVal loBoms As ListObject, ByVal dictBomTabByTaid As
 End Sub
 
 Private Sub AccumulateDemand(ByVal loWos As ListObject, ByVal dictBomTabByTaid As Object, ByVal dictDemand As Object)
-    Dim idxAssembly As Long, idxBuildQty As Long, idxBuildStatus As Long
-    Dim arrAssembly As Variant, arrBuildQty As Variant, arrBuildStatus As Variant
+    Dim idxAssembly As Long, idxBuildQty As Long
+    Dim arrAssembly As Variant, arrBuildQty As Variant
     Dim i As Long
 
     Dim assemblyId As String
     Dim buildQty As Double
     Dim bomTab As String
-    Dim buildStatus As String
 
     idxAssembly = GetColIndex(loWos, "AssemblyID")
     idxBuildQty = GetColIndex(loWos, "BuildQuantity")
-    idxBuildStatus = GetColIndex(loWos, "BuildStatus")
 
     If loWos.DataBodyRange Is Nothing Then Exit Sub
 
     arrAssembly = To2DColumnMatrix(loWos.ListColumns(idxAssembly).DataBodyRange)
     arrBuildQty = To2DColumnMatrix(loWos.ListColumns(idxBuildQty).DataBodyRange)
-    If idxBuildStatus > 0 Then arrBuildStatus = To2DColumnMatrix(loWos.ListColumns(idxBuildStatus).DataBodyRange)
 
     For i = 1 To UBound(arrAssembly, 1)
         assemblyId = Trim$(CStr(arrAssembly(i, 1)))
         buildQty = ParsePositiveDouble(arrBuildQty(i, 1))
-        buildStatus = UCase$(ReadArrText(arrBuildStatus, i))
 
         If Len(assemblyId) = 0 Or buildQty <= 0 Then GoTo ContinueLoop
-        If Not IsOpenBuildStatus(buildStatus) Then GoTo ContinueLoop
         If Not dictBomTabByTaid.Exists(assemblyId) Then GoTo ContinueLoop
 
         bomTab = CStr(dictBomTabByTaid(assemblyId))
@@ -315,23 +310,6 @@ Private Function ReadArrText(ByVal arr As Variant, ByVal idx As Long) As String
 EH:
     ReadArrText = vbNullString
 End Function
-
-Private Function IsOpenBuildStatus(ByVal buildStatus As String) As Boolean
-    buildStatus = UCase$(Trim$(buildStatus))
-
-    If Len(buildStatus) = 0 Then
-        IsOpenBuildStatus = True
-        Exit Function
-    End If
-
-    Select Case buildStatus
-        Case "SHIPPED", "CLOSED", "COMPLETE", "COMPLETED", "CANCELLED", "CANCELED"
-            IsOpenBuildStatus = False
-        Case Else
-            IsOpenBuildStatus = True
-    End Select
-End Function
-
 
 Private Sub ClearTableRows(ByVal lo As ListObject)
     Dim i As Long
