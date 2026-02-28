@@ -236,6 +236,15 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
 
     ' Required list fields
+    currentStep = "Named range preflight"
+    M_Core_Logging.LogInfo PROC_NAME, "Named-range preflight", _
+        "NR_UOM=" & DescribeNamedRangeState("NR_UOM") & _
+        "; NR_UOM_Trace=" & BuildNamedRangeTrace("NR_UOM") & _
+        "; NR_RevStatus=" & DescribeNamedRangeState("NR_RevStatus") & _
+        "; NR_RevStatus_Trace=" & BuildNamedRangeTrace("NR_RevStatus") & _
+        "; NR_IMSStatus=" & DescribeNamedRangeState("NR_IMSStatus") & _
+        "; NR_IMSStatus_Trace=" & BuildNamedRangeTrace("NR_IMSStatus")
+
     currentStep = "Selecting UOM"
     uom = Prompt_ListValue("NR_UOM", "Select UOM (required).", "New Component (" & compId & ")", DEFAULT_UOM)
     If Len(uom) = 0 Then
@@ -379,8 +388,11 @@ EH:
     failureReason = "Step=" & currentStep & "; Error " & CStr(errNum) & ": " & errDesc
     logDetails = "CompID=" & compId & "; " & failureReason & _
                  "; NR_UOM=" & DescribeNamedRangeState("NR_UOM") & _
+                 "; NR_UOM_Trace=" & BuildNamedRangeTrace("NR_UOM") & _
                  "; NR_RevStatus=" & DescribeNamedRangeState("NR_RevStatus") & _
-                 "; NR_IMSStatus=" & DescribeNamedRangeState("NR_IMSStatus")
+                 "; NR_RevStatus_Trace=" & BuildNamedRangeTrace("NR_RevStatus") & _
+                 "; NR_IMSStatus=" & DescribeNamedRangeState("NR_IMSStatus") & _
+                 "; NR_IMSStatus_Trace=" & BuildNamedRangeTrace("NR_IMSStatus")
 
     M_Core_Logging.LogError PROC_NAME, "Component creation failed", logDetails, errNum
     GoToLogSheet
@@ -772,12 +784,81 @@ EH:
     DescribeNamedRangeState = "unavailable(" & Err.Number & ": " & Err.Description & ")"
 End Function
 
+
+Private Function BuildNamedRangeTrace(ByVal namedRange As String) As String
+    Dim trace As String
+    Dim matchCount As Long
+    Dim nm As Name
+    Dim ws As Worksheet
+
+    trace = ""
+    matchCount = 0
+
+    For Each nm In ThisWorkbook.Names
+        If NameMatches(nm.Name, namedRange) Then
+            matchCount = matchCount + 1
+            trace = trace & AppendNameTraceToken("WB", ThisWorkbook.Name, nm)
+        End If
+    Next nm
+
+    For Each ws In ThisWorkbook.Worksheets
+        For Each nm In ws.Names
+            If NameMatches(nm.Name, namedRange) Then
+                matchCount = matchCount + 1
+                trace = trace & AppendNameTraceToken("WS", ws.Name, nm)
+            End If
+        Next nm
+    Next ws
+
+    If matchCount = 0 Then
+        BuildNamedRangeTrace = "no-match"
+    Else
+        BuildNamedRangeTrace = "matches=" & CStr(matchCount) & trace
+    End If
+End Function
+
+Private Function AppendNameTraceToken(ByVal scopeType As String, ByVal scopeName As String, ByVal nm As Name) As String
+    Dim rng As Range
+    Dim token As String
+    Dim refersToText As String
+
+    refersToText = SafeNameRefersTo(nm)
+    token = " | " & scopeType & "=" & scopeName & ",Name=" & nm.Name & ",RefersTo=" & Replace(refersToText, ";", ",")
+
+    On Error Resume Next
+    Set rng = nm.RefersToRange
+    If Err.Number <> 0 Then
+        token = token & ",ResolveErr=" & CStr(Err.Number) & ":" & Replace(Err.Description, ";", ",")
+        Err.Clear
+    ElseIf rng Is Nothing Then
+        token = token & ",ResolveErr=Nothing"
+    Else
+        token = token & ",Addr=" & rng.Address(External:=True)
+    End If
+    On Error GoTo 0
+
+    AppendNameTraceToken = token
+End Function
+
+Private Function SafeNameRefersTo(ByVal nm As Name) As String
+    On Error GoTo EH
+    SafeNameRefersTo = nm.RefersTo
+    Exit Function
+EH:
+    SafeNameRefersTo = "<error " & Err.Number & ": " & Err.Description & ">"
+End Function
+
 Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
     Dim rng As Range
     Dim v As Variant
     Dim outArr() As Variant
+    Dim values() As String
     Dim r As Long, c As Long, n As Long
+    Dim lb1 As Long, ub1 As Long
+    Dim lb2 As Long, ub2 As Long
+    Dim hasDim1 As Boolean, hasDim2 As Boolean
     Dim reason As String
+    Dim candidate As String
 
     If Not TryResolveNamedRangeRange(namedRange, rng, reason) Then
         ReDim outArr(1 To 1, 1 To 1)
@@ -789,23 +870,51 @@ Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
     v = rng.Value
 
     If IsArray(v) Then
-        ReDim outArr(1 To (UBound(v, 1) * UBound(v, 2)), 1 To 1)
+        hasDim1 = TryGetArrayBounds(v, 1, lb1, ub1)
+        hasDim2 = TryGetArrayBounds(v, 2, lb2, ub2)
+
+        If Not hasDim1 Then
+            ReDim outArr(1 To 1, 1 To 1)
+            outArr(1, 1) = vbNullString
+            GetNamedRangeValues = outArr
+            Exit Function
+        End If
+
         n = 0
-        For r = 1 To UBound(v, 1)
-            For c = 1 To UBound(v, 2)
-                If Not IsError(v(r, c)) Then
-                    If Len(Trim$(CStr(v(r, c)))) > 0 Then
+        If hasDim2 Then
+            For r = lb1 To ub1
+                For c = lb2 To ub2
+                    If Not IsError(v(r, c)) Then
+                        candidate = Trim$(CStr(v(r, c)))
+                        If Len(candidate) > 0 Then
+                            n = n + 1
+                            ReDim Preserve values(1 To n)
+                            values(n) = candidate
+                        End If
+                    End If
+                Next c
+            Next r
+        Else
+            For r = lb1 To ub1
+                If Not IsError(v(r)) Then
+                    candidate = Trim$(CStr(v(r)))
+                    If Len(candidate) > 0 Then
                         n = n + 1
-                        outArr(n, 1) = v(r, c)
+                        ReDim Preserve values(1 To n)
+                        values(n) = candidate
                     End If
                 End If
-            Next c
-        Next r
+            Next r
+        End If
+
         If n = 0 Then
             ReDim outArr(1 To 1, 1 To 1)
             outArr(1, 1) = vbNullString
-        ElseIf n < UBound(outArr, 1) Then
-            ReDim Preserve outArr(1 To n, 1 To 1)
+        Else
+            ReDim outArr(1 To n, 1 To 1)
+            For r = 1 To n
+                outArr(r, 1) = values(r)
+            Next r
         End If
         GetNamedRangeValues = outArr
     Else
@@ -817,6 +926,16 @@ Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
         End If
         GetNamedRangeValues = outArr
     End If
+End Function
+
+Private Function TryGetArrayBounds(ByRef v As Variant, ByVal dimension As Long, ByRef lowerBound As Long, ByRef upperBound As Long) As Boolean
+    On Error GoTo EH
+    lowerBound = LBound(v, dimension)
+    upperBound = UBound(v, dimension)
+    TryGetArrayBounds = True
+    Exit Function
+EH:
+    TryGetArrayBounds = False
 End Function
 
 Private Function TryResolveNamedRangeRange(ByVal namedRange As String, ByRef rng As Range, ByRef reason As String) As Boolean
