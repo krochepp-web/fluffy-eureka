@@ -852,13 +852,19 @@ Private Function TryResolveNamedRangeRange(ByVal namedRange As String, ByRef rng
 End Function
 
 Private Function TryGetRangeFromName(ByVal nm As Name, ByRef rng As Range) As Boolean
+    Dim setErrNum As Long
+
     On Error Resume Next
+    Err.Clear
     Set rng = nm.RefersToRange
-    If Err.Number <> 0 Then
+    setErrNum = Err.Number
+
+    If setErrNum <> 0 Then
         TryGetRangeFromName = False
     Else
         TryGetRangeFromName = Not rng Is Nothing
     End If
+
     On Error GoTo 0
 End Function
 
