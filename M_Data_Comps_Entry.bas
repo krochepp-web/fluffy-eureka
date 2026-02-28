@@ -236,6 +236,15 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
 
     ' Required list fields
+    currentStep = "Named range preflight"
+    M_Core_Logging.LogInfo PROC_NAME, "Named-range preflight", _
+        "NR_UOM=" & DescribeNamedRangeState("NR_UOM") & _
+        "; NR_UOM_Trace=" & BuildNamedRangeTrace("NR_UOM") & _
+        "; NR_RevStatus=" & DescribeNamedRangeState("NR_RevStatus") & _
+        "; NR_RevStatus_Trace=" & BuildNamedRangeTrace("NR_RevStatus") & _
+        "; NR_IMSStatus=" & DescribeNamedRangeState("NR_IMSStatus") & _
+        "; NR_IMSStatus_Trace=" & BuildNamedRangeTrace("NR_IMSStatus")
+
     currentStep = "Selecting UOM"
     uom = Prompt_ListValue("NR_UOM", "Select UOM (required).", "New Component (" & compId & ")", DEFAULT_UOM)
     If Len(uom) = 0 Then
@@ -379,8 +388,11 @@ EH:
     failureReason = "Step=" & currentStep & "; Error " & CStr(errNum) & ": " & errDesc
     logDetails = "CompID=" & compId & "; " & failureReason & _
                  "; NR_UOM=" & DescribeNamedRangeState("NR_UOM") & _
+                 "; NR_UOM_Trace=" & BuildNamedRangeTrace("NR_UOM") & _
                  "; NR_RevStatus=" & DescribeNamedRangeState("NR_RevStatus") & _
-                 "; NR_IMSStatus=" & DescribeNamedRangeState("NR_IMSStatus")
+                 "; NR_RevStatus_Trace=" & BuildNamedRangeTrace("NR_RevStatus") & _
+                 "; NR_IMSStatus=" & DescribeNamedRangeState("NR_IMSStatus") & _
+                 "; NR_IMSStatus_Trace=" & BuildNamedRangeTrace("NR_IMSStatus")
 
     M_Core_Logging.LogError PROC_NAME, "Component creation failed", logDetails, errNum
     GoToLogSheet
@@ -770,6 +782,70 @@ Private Function DescribeNamedRangeState(ByVal namedRange As String) As String
 
 EH:
     DescribeNamedRangeState = "unavailable(" & Err.Number & ": " & Err.Description & ")"
+End Function
+
+
+Private Function BuildNamedRangeTrace(ByVal namedRange As String) As String
+    Dim trace As String
+    Dim matchCount As Long
+    Dim nm As Name
+    Dim ws As Worksheet
+
+    trace = ""
+    matchCount = 0
+
+    For Each nm In ThisWorkbook.Names
+        If NameMatches(nm.Name, namedRange) Then
+            matchCount = matchCount + 1
+            trace = trace & AppendNameTraceToken("WB", ThisWorkbook.Name, nm)
+        End If
+    Next nm
+
+    For Each ws In ThisWorkbook.Worksheets
+        For Each nm In ws.Names
+            If NameMatches(nm.Name, namedRange) Then
+                matchCount = matchCount + 1
+                trace = trace & AppendNameTraceToken("WS", ws.Name, nm)
+            End If
+        Next nm
+    Next ws
+
+    If matchCount = 0 Then
+        BuildNamedRangeTrace = "no-match"
+    Else
+        BuildNamedRangeTrace = "matches=" & CStr(matchCount) & trace
+    End If
+End Function
+
+Private Function AppendNameTraceToken(ByVal scopeType As String, ByVal scopeName As String, ByVal nm As Name) As String
+    Dim rng As Range
+    Dim token As String
+    Dim refersToText As String
+
+    refersToText = SafeNameRefersTo(nm)
+    token = " | " & scopeType & "=" & scopeName & ",Name=" & nm.Name & ",RefersTo=" & Replace(refersToText, ";", ",")
+
+    On Error Resume Next
+    Set rng = nm.RefersToRange
+    If Err.Number <> 0 Then
+        token = token & ",ResolveErr=" & CStr(Err.Number) & ":" & Replace(Err.Description, ";", ",")
+        Err.Clear
+    ElseIf rng Is Nothing Then
+        token = token & ",ResolveErr=Nothing"
+    Else
+        token = token & ",Addr=" & rng.Address(External:=True)
+    End If
+    On Error GoTo 0
+
+    AppendNameTraceToken = token
+End Function
+
+Private Function SafeNameRefersTo(ByVal nm As Name) As String
+    On Error GoTo EH
+    SafeNameRefersTo = nm.RefersTo
+    Exit Function
+EH:
+    SafeNameRefersTo = "<error " & Err.Number & ": " & Err.Description & ">"
 End Function
 
 Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
