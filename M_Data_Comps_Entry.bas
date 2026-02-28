@@ -777,6 +777,9 @@ Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
     Dim v As Variant
     Dim outArr() As Variant
     Dim r As Long, c As Long, n As Long
+    Dim lb1 As Long, ub1 As Long
+    Dim lb2 As Long, ub2 As Long
+    Dim hasDim1 As Boolean, hasDim2 As Boolean
     Dim reason As String
 
     If Not TryResolveNamedRangeRange(namedRange, rng, reason) Then
@@ -789,18 +792,43 @@ Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
     v = rng.Value
 
     If IsArray(v) Then
-        ReDim outArr(1 To (UBound(v, 1) * UBound(v, 2)), 1 To 1)
+        hasDim1 = TryGetArrayBounds(v, 1, lb1, ub1)
+        hasDim2 = TryGetArrayBounds(v, 2, lb2, ub2)
+
+        If Not hasDim1 Then
+            ReDim outArr(1 To 1, 1 To 1)
+            outArr(1, 1) = vbNullString
+            GetNamedRangeValues = outArr
+            Exit Function
+        End If
+
+        If hasDim2 Then
+            ReDim outArr(1 To ((ub1 - lb1 + 1) * (ub2 - lb2 + 1)), 1 To 1)
+        Else
+            ReDim outArr(1 To (ub1 - lb1 + 1), 1 To 1)
+        End If
+
         n = 0
-        For r = 1 To UBound(v, 1)
-            For c = 1 To UBound(v, 2)
-                If Not IsError(v(r, c)) Then
-                    If Len(Trim$(CStr(v(r, c)))) > 0 Then
+        For r = lb1 To ub1
+            If hasDim2 Then
+                For c = lb2 To ub2
+                    If Not IsError(v(r, c)) Then
+                        If Len(Trim$(CStr(v(r, c)))) > 0 Then
+                            n = n + 1
+                            outArr(n, 1) = v(r, c)
+                        End If
+                    End If
+                Next c
+            Else
+                If Not IsError(v(r)) Then
+                    If Len(Trim$(CStr(v(r)))) > 0 Then
                         n = n + 1
-                        outArr(n, 1) = v(r, c)
+                        outArr(n, 1) = v(r)
                     End If
                 End If
-            Next c
+            End If
         Next r
+
         If n = 0 Then
             ReDim outArr(1 To 1, 1 To 1)
             outArr(1, 1) = vbNullString
@@ -817,6 +845,16 @@ Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
         End If
         GetNamedRangeValues = outArr
     End If
+End Function
+
+Private Function TryGetArrayBounds(ByRef v As Variant, ByVal dimension As Long, ByRef lowerBound As Long, ByRef upperBound As Long) As Boolean
+    On Error GoTo EH
+    lowerBound = LBound(v, dimension)
+    upperBound = UBound(v, dimension)
+    TryGetArrayBounds = True
+    Exit Function
+EH:
+    TryGetArrayBounds = False
 End Function
 
 Private Function TryResolveNamedRangeRange(ByVal namedRange As String, ByRef rng As Range, ByRef reason As String) As Boolean
