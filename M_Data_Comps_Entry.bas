@@ -104,9 +104,11 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
 
     Dim createdOk As Boolean
     Dim abortedReason As String
+    Dim currentStep As String
 
     createdOk = False
     abortedReason = vbNullString
+    currentStep = "Initialization"
     attemptedCompId = vbNullString
     failureReason = vbNullString
     RunNewComponent = False
@@ -116,6 +118,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     '-----------------------------
     ' Gate check (consistency)
     '-----------------------------
+    currentStep = "Gate check"
     If Not GateReady_Safe(False) Then
         abortedReason = "Gate not ready."
         GoTo Aborted
@@ -161,6 +164,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     If Len(imsDefault) = 0 Then imsDefault = DEFAULT_IMSSTATUS_FALLBACK
 
     ' Generate CompID
+    currentStep = "Generating CompID"
     compId = GenerateNextId(loComps, "CompID", COMP_ID_PREFIX, COMP_ID_PAD)
     If Len(compId) = 0 Then Err.Raise vbObjectError + 5100, PROC_NAME, "Failed to generate CompID."
     attemptedCompId = compId
@@ -180,12 +184,14 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "UpdatedBy", createdBy
 
     ' Required: OurPN / OurRev
+    currentStep = "Collecting OurPN"
     ourPN = Trim$(InputBox("Enter OurPN (required).", "New Component (" & compId & ")"))
     If Len(ourPN) = 0 Then
         abortedReason = "OurPN not provided."
         GoTo FailRollback
     End If
 
+    currentStep = "Collecting OurRev"
     ourRev = Trim$(InputBox("Enter OurRev (required).", "New Component (" & compId & ")"))
     If Len(ourRev) = 0 Then
         abortedReason = "OurRev not provided."
@@ -205,6 +211,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "OurRev", ourRev
 
     ' Required: ComponentDescription
+    currentStep = "Collecting ComponentDescription"
     desc = Prompt_RequiredText("Enter ComponentDescription (required).", "New Component (" & compId & ")", DEFAULT_DESC)
     If Len(desc) = 0 Then
         abortedReason = "ComponentDescription not provided."
@@ -213,6 +220,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "ComponentDescription", desc
 
     ' Supplier selection (forced)
+    currentStep = "Selecting Supplier"
     If Not SupplierPick_ByName(loSupp, pickId, pickName, pickDfltLT) Then
         abortedReason = "Supplier selection cancelled."
         GoTo FailRollback
@@ -226,6 +234,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
 
     ' Required list fields
+    currentStep = "Selecting UOM"
     uom = Prompt_ListValue("NR_UOM", "Select UOM (required).", "New Component (" & compId & ")", DEFAULT_UOM)
     If Len(uom) = 0 Then
         abortedReason = "UOM not selected."
@@ -233,6 +242,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
     SetByHeader loComps, lr, "UOM", uom
 
+    currentStep = "Selecting RevStatus"
     revStatus = Prompt_ListValue("NR_RevStatus", "Select RevStatus (required).", "New Component (" & compId & ")", DEFAULT_REVSTATUS)
     If Len(revStatus) = 0 Then
         abortedReason = "RevStatus not selected."
@@ -240,6 +250,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
     SetByHeader loComps, lr, "RevStatus", revStatus
 
+    currentStep = "Selecting IMSStatus"
     imsStatus = Prompt_ListValue("NR_IMSStatus", "Select IMSStatus (required).", "New Component (" & compId & ")", imsDefault)
     If Len(imsStatus) = 0 Then
         abortedReason = "IMSStatus not selected."
@@ -248,6 +259,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "IMSStatus", imsStatus
 
     ' Required numeric fields
+    currentStep = "Entering MOQ1"
     moq1 = Prompt_Long("Enter MOQ1 (required).", "New Component (" & compId & ")", DEFAULT_MOQ1, 1, 1000000)
     If moq1 = -1 Then
         abortedReason = "MOQ1 not provided."
@@ -255,6 +267,7 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     End If
     SetByHeader loComps, lr, "MOQ1", moq1
 
+    currentStep = "Entering CostPerUOMMOQ1"
     costMOQ1 = Prompt_Double("Enter CostPerUOMMOQ1 (required).", "New Component (" & compId & ")", DEFAULT_COST_MOQ1, 0, 1000000000#)
     If costMOQ1 < 0 Then
         abortedReason = "CostPerUOMMOQ1 not provided."
@@ -290,12 +303,14 @@ Private Function RunNewComponent(ByRef attemptedCompId As String, ByRef failureR
     SetByHeader loComps, lr, "IsBuildable", buildable
 
     Dim missingRequired As String
+    currentStep = "Applying schema defaults"
     missingRequired = EnsureRequiredFieldsFilled(loComps, lr, "Comps", "TBL_COMPS")
     If Len(missingRequired) > 0 Then
         abortedReason = "Missing required field(s) after defaults: " & missingRequired
         GoTo FailRollback
     End If
 
+    currentStep = "Running data integrity check"
     If Not M_Core_DataIntegrity.RunDataCheck(False) Then
         abortedReason = "Schema/data integrity requirements failed after component entry. " & DataCheckSummary()
         M_Core_Logging.LogWarn PROC_NAME, "Data integrity failed after component entry", _
@@ -335,15 +350,31 @@ Aborted:
     Exit Function
 
 EH:
+    Dim errNum As Long
+    Dim errDesc As String
+    Dim logDetails As String
+
+    errNum = Err.Number
+    errDesc = Trim$(Err.Description)
+
+    If errNum = 0 Then errNum = vbObjectError + 5199
+    If Len(errDesc) = 0 Then errDesc = "Unknown runtime error (Err.Description was blank)."
+
     On Error Resume Next
     If Not lr Is Nothing Then lr.Delete
     On Error GoTo 0
-    failureReason = "Error " & CStr(Err.Number) & ": " & Err.Description
-    M_Core_Logging.LogError PROC_NAME, "Component creation failed", _
-        "CompID=" & compId & "; " & failureReason, Err.Number
+
+    failureReason = "Step=" & currentStep & "; Error " & CStr(errNum) & ": " & errDesc
+    logDetails = "CompID=" & compId & "; " & failureReason & _
+                 "; NR_UOM=" & DescribeNamedRangeState("NR_UOM") & _
+                 "; NR_RevStatus=" & DescribeNamedRangeState("NR_RevStatus") & _
+                 "; NR_IMSStatus=" & DescribeNamedRangeState("NR_IMSStatus")
+
+    M_Core_Logging.LogError PROC_NAME, "Component creation failed", logDetails, errNum
     GoToLogSheet
     MsgBox "No new component created." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "New Component"
+           "Step: " & currentStep & vbCrLf & _
+           "Error " & errNum & ": " & errDesc, vbOKOnly, "New Component"
 End Function
 
 Private Function EnsureRequiredFieldsFilled(ByVal lo As ListObject, ByVal lr As ListRow, ByVal tabName As String, ByVal tableName As String) As String
@@ -522,6 +553,7 @@ Private Function Prompt_ListValue(ByVal namedRange As String, ByVal prompt As St
     Dim arr As Variant
     Dim choices() As String
     Dim i As Long, n As Long
+    Dim choiceCount As Long
     Dim menu As String
     Dim resp As String
     Dim idx As Long
@@ -542,9 +574,24 @@ Private Function Prompt_ListValue(ByVal namedRange As String, ByVal prompt As St
     End If
 
     ReDim choices(1 To n)
+    choiceCount = 0
     For i = 1 To n
-        choices(i) = Trim$(CStr(arr(i, 1)))
+        If Not IsError(arr(i, 1)) Then
+            Dim candidate As String
+            candidate = Trim$(CStr(arr(i, 1)))
+            If Len(candidate) > 0 Then
+                choiceCount = choiceCount + 1
+                choices(choiceCount) = candidate
+            End If
+        End If
     Next i
+
+    If choiceCount = 0 Then
+        Prompt_ListValue = Prompt_FreeTextValue(prompt, title, defaultValue, namedRange)
+        Exit Function
+    End If
+
+    n = choiceCount
 
 Retry:
     menu = prompt & vbCrLf & vbCrLf
@@ -654,23 +701,21 @@ Retry:
 End Function
 
 Private Sub RequireNamedRange(ByVal namedRange As String)
-    Dim nm As Name
-    On Error GoTo EH
-    Set nm = ThisWorkbook.names(namedRange)
-    If nm Is Nothing Then Err.Raise vbObjectError + 5800, "RequireNamedRange", "Named range not found: " & namedRange
-    Exit Sub
-EH:
+    Dim rng As Range
+    Dim reason As String
+
+    If TryResolveNamedRangeRange(namedRange, rng, reason) Then Exit Sub
+
     MsgBox "RequireNamedRange failed." & vbCrLf & _
-           "Error " & Err.Number & ": " & Err.Description, vbOKOnly, "New Component"
-    Err.Raise vbObjectError + 5801, "RequireNamedRange", "Named range not found: " & namedRange
+           "Named range unavailable: " & namedRange & vbCrLf & _
+           "Details: " & reason, vbOKOnly, "New Component"
+    Err.Raise vbObjectError + 5801, "RequireNamedRange", "Named range unavailable: " & namedRange & " (" & reason & ")"
 End Sub
 
 Private Function NamedRangeExists(ByVal namedRange As String) As Boolean
-    Dim nm As Name
-    On Error Resume Next
-    Set nm = ThisWorkbook.Names(namedRange)
-    On Error GoTo 0
-    NamedRangeExists = Not nm Is Nothing
+    Dim rng As Range
+    Dim reason As String
+    NamedRangeExists = TryResolveNamedRangeRange(namedRange, rng, reason)
 End Function
 
 Private Function Prompt_FreeTextValue(ByVal prompt As String, ByVal title As String, ByVal defaultValue As String, ByVal sourceName As String) As String
@@ -685,37 +730,146 @@ Private Function Prompt_FreeTextValue(ByVal prompt As String, ByVal title As Str
     End If
 End Function
 
+Private Function DescribeNamedRangeState(ByVal namedRange As String) As String
+    Dim arr As Variant
+    Dim n As Long
+    Dim sample As String
+    Dim rng As Range
+    Dim reason As String
+
+    On Error GoTo EH
+
+    If Not TryResolveNamedRangeRange(namedRange, rng, reason) Then
+        DescribeNamedRangeState = reason
+        Exit Function
+    End If
+
+    arr = GetNamedRangeValues(namedRange)
+    n = UBound(arr, 1)
+    If n <= 0 Then
+        DescribeNamedRangeState = "exists-empty"
+        Exit Function
+    End If
+
+    sample = Trim$(CStr(arr(1, 1)))
+    If Len(sample) = 0 Then sample = "<blank>"
+    DescribeNamedRangeState = "exists-count=" & CStr(n) & "; first='" & sample & "'"
+    Exit Function
+
+EH:
+    DescribeNamedRangeState = "unavailable(" & Err.Number & ": " & Err.Description & ")"
+End Function
+
 Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
     Dim rng As Range
     Dim v As Variant
     Dim outArr() As Variant
     Dim r As Long, c As Long, n As Long
+    Dim reason As String
 
-    Set rng = ThisWorkbook.names(namedRange).RefersToRange
-    v = rng.value
+    If Not TryResolveNamedRangeRange(namedRange, rng, reason) Then
+        ReDim outArr(1 To 1, 1 To 1)
+        outArr(1, 1) = vbNullString
+        GetNamedRangeValues = outArr
+        Exit Function
+    End If
+
+    v = rng.Value
 
     If IsArray(v) Then
         ReDim outArr(1 To (UBound(v, 1) * UBound(v, 2)), 1 To 1)
         n = 0
         For r = 1 To UBound(v, 1)
             For c = 1 To UBound(v, 2)
-                If Len(Trim$(CStr(v(r, c)))) > 0 Then
-                    n = n + 1
-                    outArr(n, 1) = v(r, c)
+                If Not IsError(v(r, c)) Then
+                    If Len(Trim$(CStr(v(r, c)))) > 0 Then
+                        n = n + 1
+                        outArr(n, 1) = v(r, c)
+                    End If
                 End If
             Next c
         Next r
         If n = 0 Then
-            ReDim outArr(1 To 0, 1 To 1)
+            ReDim outArr(1 To 1, 1 To 1)
+            outArr(1, 1) = vbNullString
         ElseIf n < UBound(outArr, 1) Then
             ReDim Preserve outArr(1 To n, 1 To 1)
         End If
         GetNamedRangeValues = outArr
     Else
         ReDim outArr(1 To 1, 1 To 1)
-        outArr(1, 1) = v
+        If IsError(v) Then
+            outArr(1, 1) = vbNullString
+        Else
+            outArr(1, 1) = v
+        End If
         GetNamedRangeValues = outArr
     End If
+End Function
+
+Private Function TryResolveNamedRangeRange(ByVal namedRange As String, ByRef rng As Range, ByRef reason As String) As Boolean
+    Dim nm As Name
+    Dim ws As Worksheet
+
+    reason = "missing"
+    Set rng = Nothing
+
+    For Each nm In ThisWorkbook.Names
+        If NameMatches(nm.Name, namedRange) Then
+            If TryGetRangeFromName(nm, rng) Then
+                TryResolveNamedRangeRange = True
+                Exit Function
+            End If
+            reason = "invalid-ref(" & Err.Number & ": " & Err.Description & ")"
+            Err.Clear
+        End If
+    Next nm
+
+    For Each ws In ThisWorkbook.Worksheets
+        For Each nm In ws.Names
+            If NameMatches(nm.Name, namedRange) Then
+                If TryGetRangeFromName(nm, rng) Then
+                    TryResolveNamedRangeRange = True
+                    Exit Function
+                End If
+                reason = "invalid-ref(" & Err.Number & ": " & Err.Description & ")"
+                Err.Clear
+            End If
+        Next nm
+    Next ws
+End Function
+
+Private Function TryGetRangeFromName(ByVal nm As Name, ByRef rng As Range) As Boolean
+    Dim setErrNum As Long
+
+    On Error Resume Next
+    Err.Clear
+    Set rng = nm.RefersToRange
+    setErrNum = Err.Number
+
+    If setErrNum <> 0 Then
+        TryGetRangeFromName = False
+    Else
+        TryGetRangeFromName = Not rng Is Nothing
+    End If
+
+    On Error GoTo 0
+End Function
+
+Private Function NameMatches(ByVal qualifiedName As String, ByVal targetName As String) As Boolean
+    Dim bangPos As Long
+    Dim baseName As String
+
+    baseName = Trim$(qualifiedName)
+    bangPos = InStrRev(baseName, "!")
+    If bangPos > 0 Then baseName = Mid$(baseName, bangPos + 1)
+
+    If Left$(baseName, 1) = "=" Then baseName = Mid$(baseName, 2)
+    If Left$(baseName, 1) = "'" And Right$(baseName, 1) = "'" And Len(baseName) >= 2 Then
+        baseName = Mid$(baseName, 2, Len(baseName) - 2)
+    End If
+
+    NameMatches = (StrComp(baseName, targetName, vbTextCompare) = 0)
 End Function
 
 Private Function GetUserNameSafe() As String
