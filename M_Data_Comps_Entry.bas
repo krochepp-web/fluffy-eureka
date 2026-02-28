@@ -852,11 +852,13 @@ Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
     Dim rng As Range
     Dim v As Variant
     Dim outArr() As Variant
+    Dim values() As String
     Dim r As Long, c As Long, n As Long
     Dim lb1 As Long, ub1 As Long
     Dim lb2 As Long, ub2 As Long
     Dim hasDim1 As Boolean, hasDim2 As Boolean
     Dim reason As String
+    Dim candidate As String
 
     If Not TryResolveNamedRangeRange(namedRange, rng, reason) Then
         ReDim outArr(1 To 1, 1 To 1)
@@ -878,38 +880,41 @@ Private Function GetNamedRangeValues(ByVal namedRange As String) As Variant
             Exit Function
         End If
 
-        If hasDim2 Then
-            ReDim outArr(1 To ((ub1 - lb1 + 1) * (ub2 - lb2 + 1)), 1 To 1)
-        Else
-            ReDim outArr(1 To (ub1 - lb1 + 1), 1 To 1)
-        End If
-
         n = 0
-        For r = lb1 To ub1
-            If hasDim2 Then
+        If hasDim2 Then
+            For r = lb1 To ub1
                 For c = lb2 To ub2
                     If Not IsError(v(r, c)) Then
-                        If Len(Trim$(CStr(v(r, c)))) > 0 Then
+                        candidate = Trim$(CStr(v(r, c)))
+                        If Len(candidate) > 0 Then
                             n = n + 1
-                            outArr(n, 1) = v(r, c)
+                            ReDim Preserve values(1 To n)
+                            values(n) = candidate
                         End If
                     End If
                 Next c
-            Else
+            Next r
+        Else
+            For r = lb1 To ub1
                 If Not IsError(v(r)) Then
-                    If Len(Trim$(CStr(v(r)))) > 0 Then
+                    candidate = Trim$(CStr(v(r)))
+                    If Len(candidate) > 0 Then
                         n = n + 1
-                        outArr(n, 1) = v(r)
+                        ReDim Preserve values(1 To n)
+                        values(n) = candidate
                     End If
                 End If
-            End If
-        Next r
+            Next r
+        End If
 
         If n = 0 Then
             ReDim outArr(1 To 1, 1 To 1)
             outArr(1, 1) = vbNullString
-        ElseIf n < UBound(outArr, 1) Then
-            ReDim Preserve outArr(1 To n, 1 To 1)
+        Else
+            ReDim outArr(1 To n, 1 To 1)
+            For r = 1 To n
+                outArr(r, 1) = values(r)
+            Next r
         End If
         GetNamedRangeValues = outArr
     Else
